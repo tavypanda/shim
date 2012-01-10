@@ -1,0 +1,5 @@
+#summary Current Downloads
+
+Shim is currently in a pre-release state.
+
+The SNAPSHOT jar can be downloaded here.
