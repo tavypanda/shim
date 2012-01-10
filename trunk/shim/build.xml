@@ -1,0 +1,191 @@
+<project name="Shim Framework" default="dist" basedir=".">
+	<description>Shim - Simple Java Framework</description>
+
+	<property file="build.properties" />
+	<!--
+		The build.properties file should contain the following properties:
+		<property name="lib" location="${user.home}\Documents\JavaLibs\_repository" />
+		<property name="publishTo" location="${lib}\xxxxx-arc\jars" />
+	-->
+
+	<property name="jarname" value="shim" />
+
+
+	<!-- for the jar manifest -->
+	<tstamp />
+	<property name="specification.name" value="Shim Simple Java Framework" />
+	<property name="specification.version" value="11" />
+	<property name="specification.vendor" value="Derek Gau" />
+	<property name="implementation.name" value="${jarname}" />
+	<property name="implementation.version" value="1.0" />
+	<property name="implementation.vendor" value="Derek Gau" />
+
+	<!-- set global properties for this build -->
+	<property name="src" location="src" />
+	<property name="build" location="build" />
+	<property name="dist" location="dist" />
+
+	<!-- classpath for compilation -->
+	<path id="base.classpath">
+
+		<!-- Files present in the common lib folder. -->
+		<fileset id="project.compile.dependencies" dir="${lib}">
+			<!-- Apache commons  -->
+			<include name="commons-dbutils-1.3.jar" />
+
+			<!-- GSON (Google JSON) parsing -->
+			<include name="gson-1.7.1.jar" />
+
+			<!-- Log4j -->
+			<include name="log4j-1.2.15.jar" />
+			
+			<!-- JSON -->
+			<include name="json.jar" />
+
+			<!-- MongoDb -->
+			<include name="mongo-2.6.5.jar" />
+			
+			<!-- JavaCSV -->
+			<include name="javacsv.jar" />
+
+			<!-- Saxon 9 -->
+			<include name="saxon9he.jar" />
+
+					
+		</fileset>
+	</path>
+
+	<!-- create a property containing all .jar files, no prefix,  and seperated with a space -->
+	<pathconvert property="manifest.classpath" pathsep=" ">
+		<mapper>
+			<chainedmapper>
+				<!-- remove absolute path -->
+				<flattenmapper />
+
+				<!-- add lib/ prefix  
+			        <globmapper from="*" to="lib/*" />
+			      	-->
+			</chainedmapper>
+		</mapper>
+		<path refid="base.classpath" />
+	</pathconvert>
+	<pathconvert property="pretty.classpath" pathsep="${line.separator}">
+		<mapper>
+			<chainedmapper>
+				<!-- remove absolute path -->
+				<flattenmapper />
+				<globmapper from="*" to="  *" />
+			</chainedmapper>
+		</mapper>
+		<path refid="base.classpath" />
+	</pathconvert>
+
+	<target name="about" description="About this project">
+		<echo>${specification.name} (${specification.vendor} v${specification.version})</echo>
+		<echo>${implementation.name} version ${implementation.version}</echo>
+		<echo message=" ${line.separator}" />
+		<echo>This project provides easy-to-use data access capabilites for:</echo>
+		<echo message=" ${line.separator}" />
+		<echo>  1) SQL databases, via the com.google.code.shim.data.sql package.</echo>
+		<echo>  2) MongoDb databases, via the com.google.code.shim.data.mongodb package.</echo>
+		<echo message=" ${line.separator}" />
+		<echo>Jar dependencies are: </echo>
+		<echo message=" ${line.separator}" />
+		<echo>${pretty.classpath}</echo>
+	</target>
+
+	<target name="init" description="Initializes the build directory.">
+		<mkdir dir="${build}" />
+	</target>
+
+	<target name="docs" description="Generate javadoc.">
+		<javadoc packagenames="com.google.code.shim.*" sourcepath="${src}" defaultexcludes="yes" destdir="${dist}/docs/api" author="true" version="true" use="true" classpathref="base.classpath" windowtitle="EasyAccess API Docs">
+			<doctitle>
+				<![CDATA[<h1>EasyAccess API</h1>]]></doctitle>
+		<bottom>
+				<![CDATA[<i>Copyright &#169; 2011 Derek Gau. All Rights Reserved.</i>]]></bottom>
+		<tag name="todo" scope="all" description="To do:" />
+		<group title="SQL Data Access Packages" packages="com.google.code.shim.*" />
+		<group title="Group 2 Packages" packages="com.dummy.test.b*:com.dummy.test.c*" />
+		<link offline="true" href="http://download.oracle.com/javase/6/docs/api/" packagelistLoc="C:\tmp" />
+		<link href="http://developer.java.sun.com/developer/products/xml/docs/api/" />
+	</javadoc>
+	</target>
+
+	
+	<target name="compile" depends="init" description="Compile the source.">
+	<!-- Compile the java code from ${src} into ${build} -->
+	<javac srcdir="${src}" destdir="${build}" debug="on" fork="true" source="1.5">
+		<classpath refid="base.classpath">
+		</classpath>
+	</javac>
+	<copy todir="${build}">
+		<fileset dir="${src}">
+			<include name="**/*.xml" />
+			<include name="**/*.properties" />
+		</fileset>
+	</copy>
+	</target>
+	
+	<target name="dist" depends="compile" description="Generate a SNAPSHOT and a date-stamped jar file.">
+		<jar destfile="${dist}/${jarname}-${implementation.version}.${DSTAMP}.jar">
+			<fileset dir="${build}" id="id">
+				<include name="**/*.class" />
+				<include name="**/*.properties" />
+			</fileset>
+			<manifest>
+				<attribute name="Built-By" value="${user.name}" />
+				<!-- <attribute name="Main-Class" value="my.path.to.the.main.Application" /> -->
+		
+				<section name="common">
+					<attribute name="Specification-Title" value="${specification.name}" />
+					<attribute name="Specification-Version" value="${specification.version}" />
+					<attribute name="Specification-Vendor" value="${specification.vendor}" />
+					<attribute name="Implementation-Title" value="${implementation.name}" />
+					<attribute name="Implementation-Version" value="${implementation.version}.${DSTAMP}" />
+					<attribute name="Implementation-Vendor" value="${implementation.vendor}" />
+				</section>
+		
+				<!-- finally, use the magically generated libs path -->
+				<attribute name="Class-Path" value="${manifest.classpath}" />
+			</manifest>
+		
+		</jar>
+		
+		
+		<jar destfile="${dist}/${jarname}-${implementation.version}.SNAPSHOT.jar" >
+			<fileset dir="${build}" id="id">
+				<include name="**/*.class" />
+				<include name="**/*.properties" />
+			</fileset>
+			<manifest>
+				<attribute name="Built-By" value="${user.name}" />
+				<!-- <attribute name="Main-Class" value="my.path.to.the.main.Application" /> -->
+		
+				<section name="common">
+					<attribute name="Specification-Title" value="${specification.name}" />
+					<attribute name="Specification-Version" value="${specification.version}" />
+					<attribute name="Specification-Vendor" value="${specification.vendor}" />
+					<attribute name="Implementation-Title" value="${implementation.name}" />
+					<attribute name="Implementation-Version" value="${implementation.version}.SNAPSHOT" />
+					<attribute name="Implementation-Vendor" value="${implementation.vendor}" />
+				</section>
+		
+				<!-- finally, use the magically generated libs path -->
+				<attribute name="Class-Path" value="${manifest.classpath}" />
+			</manifest>
+		</jar>
+		
+		<delete dir="${build}" />
+	</target>
+	
+	<target name="publish" depends="dist" description="Publish the jar to a repository.">
+		<copy todir="${publishTo}">
+			<fileset dir="${dist}">
+				<include name="${jarname}-${implementation.version}.${DSTAMP}.jar" />
+				<include name="${jarname}-*.SNAPSHOT.jar" />
+			</fileset>
+		</copy>
+	
+	</target>
+</project>
