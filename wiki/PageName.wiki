@@ -1,4 +1,4 @@
-#summary Why Shim?
+#Intro Why Shim?
 
 = Introduction =
 
