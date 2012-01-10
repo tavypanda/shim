@@ -2,4 +2,4 @@
 
 Shim is currently in a pre-release state.
 
-The SNAPSHOT jar can be downloaded here.
+The SNAPSHOT jar can be downloaded [http://code.google.com/p/shim/source/browse/trunk/shim/dist/shim-SNAPSHOT.jar here].
