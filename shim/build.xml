@@ -14,10 +14,10 @@
 	<!-- for the jar manifest -->
 	<tstamp />
 	<property name="specification.name" value="Shim Simple Java Framework" />
-	<property name="specification.version" value="11" />
+	<property name="specification.version" value="1" />
 	<property name="specification.vendor" value="Derek Gau" />
 	<property name="implementation.name" value="${jarname}" />
-	<property name="implementation.version" value="1.0" />
+	<property name="implementation.version" value="SNAPSHOT" />
 	<property name="implementation.vendor" value="Derek Gau" />
 
 	<!-- set global properties for this build -->
@@ -135,7 +135,8 @@
 	</target>
 	
 	<target name="dist" depends="compile" description="Generate a SNAPSHOT and a date-stamped jar file.">
-		<jar destfile="${dist}/${jarname}-${implementation.version}.${DSTAMP}.jar">
+		<!-- TODO: ${jarname}-${implementation.version} -->
+		<jar destfile="${dist}/${jarname}-${DSTAMP}-${implementation.version}.jar">
 			<fileset dir="${build}" id="id">
 				<include name="**/*.class" />
 				<include name="**/*.properties" />
@@ -159,8 +160,8 @@
 		
 		</jar>
 		
-		
-		<jar destfile="${dist}/${jarname}-${implementation.version}.SNAPSHOT.jar" >
+		<!-- TODO: ${jarname}-${implementation.version}.SNAPSHOT.jar -->
+		<jar destfile="${dist}/${jarname}-${implementation.version}.jar" >
 			<fileset dir="${build}" id="id">
 				<include name="**/*.class" />
 				<include name="**/*.properties" />
