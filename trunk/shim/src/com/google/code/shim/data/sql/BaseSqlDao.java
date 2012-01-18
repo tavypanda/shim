@@ -19,16 +19,19 @@ import javax.sql.DataSource;
 
 import org.apache.commons.dbutils.DbUtils;
 import org.apache.commons.dbutils.QueryRunner;
+import org.apache.commons.dbutils.ResultSetHandler;
 import org.apache.commons.dbutils.handlers.ScalarHandler;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
-import org.json.JSONArray;
 import org.json.JSONObject;
 
 import com.google.code.shim.collections.Row;
 import com.google.code.shim.data.BaseDao;
 import com.google.code.shim.data.DataAccessException;
 import com.google.code.shim.data.UnavailableException;
+import com.google.code.shim.data.sql.handler.JsonObjectHandler;
+import com.google.code.shim.data.sql.handler.RowHandler;
+import com.google.code.shim.data.sql.handler.RowListHandler;
 
 /**
  * Provides basic capabilities for all DAOs. Implementing method naming conventions and behaviors will help save you
@@ -288,18 +291,25 @@ public abstract class BaseSqlDao extends BaseDao {
 			logger.debug("sql property name: " + sqlPropName);
 		}
 
-		return selectSingleUsingProperty(sqlPropName, queryParms);
+		return selectSingleUsingProperty(new RowHandler(), sqlPropName, queryParms);
 	}
-
-	public final JSONObject selectSingleAsJson(Object... queryParms) throws DataAccessException {
+	/**
+	 * Queries a single row from the database.
+	 * @param handler controls the form of output returned
+	 * @param queryParms   parameters to add to the SQL statement for the query.
+	 * @return the output of the single row, controlled by the handler
+	 * @throws DataAccessException
+	 */
+	public final <T> T selectSingleEasily(ResultSetHandler<T> handler, Object... queryParms) throws DataAccessException {
 		// Get the name of the method that called THIS method.
 		String sqlPropName = "sql." + deriveMethodNameFromStackTrace(3);
 		if (logger.isDebugEnabled()) {
 			logger.debug("sql property name: " + sqlPropName);
 		}
 
-		return selectSingleUsingPropertyJson(sqlPropName, queryParms);
+		return selectSingleUsingProperty(handler, sqlPropName, queryParms);
 	}
+
 
 	/**
 	 * Returns a list of maps containing data for several rows in a database table. Similar to the
@@ -319,17 +329,25 @@ public abstract class BaseSqlDao extends BaseDao {
 			logger.debug("sql property name: " + sqlPropname);
 		}
 
-		return selectMultipleUsingProperty(sqlPropname, queryParms);
+		return selectMultipleUsingProperty(new RowListHandler(), sqlPropname, queryParms);
 	}
 
-	public final JSONArray selectMultipleEasilyAsJson(Object... queryParms) throws DataAccessException {
+	/**
+	 * 
+	 * @param handler
+	 * @param queryParms
+	 * @return
+	 * @throws DataAccessException
+	 */
+	public final <T> T selectMultipleEasily(ResultSetHandler<T> handler, Object... queryParms) throws DataAccessException {
 		String sqlPropname = "sql." + deriveMethodNameFromStackTrace(3);
 		if (logger.isDebugEnabled()) {
 			logger.debug("sql property name: " + sqlPropname);
 		}
 
-		return selectMultipleUsingPropertyJson(sqlPropname, queryParms);
+		return selectMultipleUsingProperty(handler, sqlPropname, queryParms);
 	}
+	 
 
 	/**
 	 * Issues a delete statement. By convention, the method will assume a property exists of the form: "sql." + [name of
@@ -400,28 +418,18 @@ public abstract class BaseSqlDao extends BaseDao {
 	 * @throws DataAccessException
 	 *             which may wrap a SQLException or other exception
 	 */
-	public Row selectSingleUsingProperty(String sqlPropname, Object... queryParms)
+	public <T> T selectSingleUsingProperty(ResultSetHandler<T> handler, String sqlPropname, Object... queryParms)
 		throws DataAccessException {
 		try {
 			String sql = buildSelectSQL(getSQLFromProperty(sqlPropname), queryParms);
 			QueryRunner qr = new QueryRunner(getDataSource());
-			return qr.query(sql, new RowHandler(), queryParms);
+			return qr.query(sql, handler, queryParms);
 		} catch (Exception e) {
 			throw handleException(e);
 		}
 	}
 
-	public JSONObject selectSingleUsingPropertyJson(String sqlPropname, Object... queryParms)
-		throws DataAccessException {
-		try {
-			String sql = buildSelectSQL(getSQLFromProperty(sqlPropname), queryParms);
-			QueryRunner qr = new QueryRunner(getDataSource());
-			JSONObject results = qr.query(sql, new JsonObjectHandler(), queryParms);
-			return results;
-		} catch (Exception e) {
-			throw handleException(e);
-		}
-	}
+	
 
 	private String getSQLFromProperty(String sqlPropName) {
 		String sql = getStringProperty(sqlPropName);
@@ -520,85 +528,72 @@ public abstract class BaseSqlDao extends BaseDao {
 
 	}
 
+	
+
+	
 	/**
-	 * Issues a select statement that may return multiple rows.
-	 * 
+	 * Parameterized method allows the specification fo a result set handler for the query.
+	 * @param handler
 	 * @param sqlPropname
-	 *            property that specifies the parameterized SQL select statement.
 	 * @param queryParms
-	 *            object array of parameters to be passed into the statement.
-	 * @return a list of maps. Each map represents a row returned from the query. The map keys are strings, and are the
-	 *         column names (or column aliases) that were indicated in the sql statement.
+	 * @return
 	 * @throws DataAccessException
-	 *             which may wrap a SQLException or other exception
 	 */
-	public List<Row> selectMultipleUsingProperty(String sqlPropname, Object... queryParms)
+	public <T> T selectMultipleUsingProperty(ResultSetHandler<T> handler, String sqlPropname, Object... queryParms)
 		throws DataAccessException {
 		try {
 			String sql = buildSelectSQL(getSQLFromProperty(sqlPropname), queryParms);
 			QueryRunner qr = new QueryRunner(getDataSource());
-			return  qr.query(sql, new RowListHandler(), queryParms);
-			
-		} catch (Exception e) {
-			throw handleException(e);
-		}
-	}
-
-	public JSONArray selectMultipleUsingPropertyJson(String sqlPropname, Object... queryParms)
-		throws DataAccessException {
-		try {
-			String sql = buildSelectSQL(getSQLFromProperty(sqlPropname), queryParms);
-			QueryRunner qr = new QueryRunner(getDataSource());
-			JSONArray results = qr.query(sql, new JsonArrayHandler(), queryParms);
-			return results;
+			return qr.query(sql, handler, queryParms);
 
 		} catch (Exception e) {
 			throw handleException(e);
 		}
 	}
 
+	 
 	/**
 	 * Issues a select statement that may return multiple rows.
 	 * 
+	 * @param handler produces the correct return type of output
 	 * @param sql
 	 *            the parameterized SQL select statement.
 	 * @param queryParms
 	 *            object array of parameters to be passed into the statement.
-	 * @return a list of maps. Each map represents a row returned from the query. The map keys are strings, and are the
-	 *         column names (or column aliases) that were indicated in the sql statement.
+	 * @return the returned type specified by the handler
 	 * @throws DataAccessException
 	 */
-	public List<Row> selectMultipleUsingStatement(String sql, Object... queryParms)
+	public <T> T selectMultipleUsingStatement(ResultSetHandler<T> handler, String sql, Object... queryParms)
 		throws DataAccessException {
 		try {
 			buildSelectSQL(sql, queryParms);
 			QueryRunner qr = new QueryRunner(getDataSource());
-			return qr.query(sql, new RowListHandler(), queryParms);
+			return qr.query(sql, handler, queryParms);
 		} catch (Exception e) {
 			throw handleException(e);
 		}
-	}
-
-	public JSONArray selectMultipleUsingStatementJson(String sql, Object... queryParms) throws DataAccessException {
+	} 
+	
+ 
+	
+	/**
+	 * Issues a select statement that returns a single row of data.
+	 * 
+	 * @param handler produces the correct return type of output
+	 * @param sql
+	 *            the parameterized SQL select statement.
+	 * @param queryParms
+	 *            object array of parameters to be passed into the statement.
+	 * @return the returned type specified by the handler
+	 * @throws DataAccessException
+	 */
+	public  <T> T  selectSingleUsingStatement(ResultSetHandler<T> handler, String sql, Object... queryParms) throws DataAccessException {
 		try {
 
 			buildSelectSQL(sql, queryParms);
 			QueryRunner qr = new QueryRunner(getDataSource());
-			JSONArray results = qr.query(sql, new JsonArrayHandler(), queryParms);
-
-			return results;
-		} catch (Exception e) {
-			throw handleException(e);
-		}
-	}
-
-	public Row selectSingleUsingStatement(String sql, Object... queryParms) throws DataAccessException {
-		try {
-
-			buildSelectSQL(sql, queryParms);
-			QueryRunner qr = new QueryRunner(getDataSource());
-			Map<String, Object> results = qr.query(sql, new RowHandler(), queryParms);
-			return new Row(results);
+			return qr.query(sql, handler, queryParms);
+			
 		} catch (Exception e) {
 			throw handleException(e);
 		}
