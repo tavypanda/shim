@@ -41,7 +41,7 @@ public class Loader extends BaseSqlDao {
 	}
 	/**
 	 * 
-	 * Loads a database table from a file (specified by a classpath resource).  Tthe following file conventions are required:
+	 * Loads a database table from a file (specified by a classpath resource).  The following file conventions are required:
 	 * <ol>
 	 * <li>the file must have the name: [table name].[filesuffix]   </li>
 	 * <li>the file must contain a single header line whose header names exactly correspond to the columns in the table</li>
