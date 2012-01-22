@@ -1,0 +1,15 @@
+Avenue
+Road
+Way
+Boulevard
+Hwy
+Court
+Lane
+Drive
+Pike
+Place
+Trail
+Way
+Street
+Terrace
+Circle
