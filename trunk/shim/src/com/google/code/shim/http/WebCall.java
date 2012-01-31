@@ -77,56 +77,93 @@ public class WebCall {
 	private HttpResponse response;
 	private HttpReqType requestType;
 
+	/**
+	 * Empty constructor.
+	 */
 	public WebCall() {
 	}
 
 	/**
 	 * Begin constructing an HTTP GET request.
 	 * 
-	 * @param url
-	 * @return
+	 *  @return
 	 * @throws HttpException
 	 */
 	public WebCall get() throws HttpException {
 		requestType = HttpReqType.GET;
 		return this;
 	}
-
+	/**
+	 * Begin constructing an HTTP POST request.
+	 * 
+	 * @return
+	 * @throws HttpException
+	 */
 	public WebCall post() throws HttpException {
 		requestType = HttpReqType.POST;
 		return this;
 	}
 
+	/**
+	 * Begin constructing an HTTP PUT request.
+	 * 
+	 * @return
+	 * @throws HttpException
+	 */
 	public WebCall put() throws HttpException {
 		requestType = HttpReqType.PUT;
 		return this;
 	}
-
+	/**
+	 * Begin constructing an HTTP DELETE request.
+	 * 
+	 * @return
+	 * @throws HttpException
+	 */
 	public WebCall delete() throws HttpException {
 		requestType = HttpReqType.DELETE;
 		return this;
 	}
-
+	/**
+	 * Begin building the request URI for an HTTP call.
+	 * @return
+	 */
 	public WebCall http() {
 		uriString += "http://";
 		return this;
 	}
-
+	/**
+	 * Begin building the request URI for an HTTPS call.
+	 * 
+	 * @return
+	 */
 	public WebCall https() {
 		uriString += "https://";
 		return this;
 	}
-
+	/**
+	 * Append the host to the request URI (make sure to call {@link #http()} or {@link #https()} first).
+	 * @param uriHost
+	 * @return
+	 */
 	public WebCall host(String uriHost) {
 		uriString += uriHost;
 		return this;
 	}
-
+	/**
+	 * Append the port number to the request URI (make sure you called {@link #host(String)} before this method).
+	 * @param uriPort
+	 * @return
+	 */
 	public WebCall port(int uriPort) {
 		uriString += ":" + uriPort;
 		return this;
 	}
-
+	/**
+	 * Append the path to the request URI.  THis method can be called multiple times to build the path context of the URI.
+	 * @param uriPath
+	 * @return
+	 */
 	public WebCall path(String uriPath) {
 		if (!uriString.endsWith("/") && !uriPath.startsWith("/")) {
 			uriString += "/";
@@ -134,14 +171,18 @@ public class WebCall {
 		uriString += uriPath;
 		return this;
 	}
-
+	/**
+	 * Appends a web fragment to the end of the URI.  Call this after you are done with making all your {@link #path(String)} calls.
+	 * @param uriFragment
+	 * @return
+	 */
 	public WebCall fragment(String uriFragment) {
 		uriString += "#" + uriFragment;
 		return this;
 	}
 
 	/**
-	 * Adds a header to the call.
+	 * Adds a header to the call.  You can do this at any time in the URI construction process.
 	 * 
 	 * @param headerName
 	 * @param headerValue
@@ -153,7 +194,7 @@ public class WebCall {
 	}
 
 	/**
-	 * Adds a parm to the request URI directly (use this for GET requests).
+	 * Adds a parm to the request URI directly (use this for GET requests).  You can do this at any time in the URI construction process.
 	 * 
 	 * @param parmName
 	 * @param parmValue
@@ -165,7 +206,7 @@ public class WebCall {
 	}
 
 	/**
-	 * Adds a parm to the body of the request (use this for urlencoded POST requests).
+	 * Adds a parm to the body of the request (use this for urlencoded POST requests).  You can do this at any time in the URI construction process.
 	 * 
 	 * @param parmName
 	 * @param parmValue
@@ -178,7 +219,7 @@ public class WebCall {
 	}
 
 	/**
-	 * Adds data to the body content of the request. (use this for POST or PUT requests)
+	 * Adds data to the body content of the request. (use this for POST or PUT requests).  You can do this at any time in the URI construction process.
 	 * 
 	 * @param data
 	 * @param mimeType
@@ -199,7 +240,9 @@ public class WebCall {
 
 	/**
 	 * Executes the request.
-	 * 
+	 * After execution, you can use the {@link #getResponseEntity()}, {@link #getResponseEntityAsString()}, {@link #getResponseEntityAsString(String)},
+	 * {@link #getStatusCode()}, {@link #getStatusReason()}, {@link #getResponseHeader(String)}, and {@link #getDuration()} methods as needed to 
+	 * see how it went.
 	 * @return
 	 * @throws HttpException
 	 */
