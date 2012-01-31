@@ -113,7 +113,7 @@ public class WebCall {
 	}
 
 	public WebCall https() {
-		uriString += "http://";
+		uriString += "https://";
 		return this;
 	}
 
