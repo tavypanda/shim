@@ -1,0 +1,18 @@
+DbType	SqlType	LangType
+bigint	BIGINT	long
+timestamp binary	BINARY	byte[]
+bit	BIT	boolean
+char nchar	CHAR	String
+decimal money smallmoney	DECIMAL	java.math.BigDecimal
+float	DOUBLE	double
+int	INTEGER	int
+image	LONGVARBINARY	byte[]
+text ntext	LONGVARCHAR	String
+numeric	NUMERIC	java.math.BigDecimal
+real	REAL	float
+smallint	SMALLINT	short
+datetime smalldatetime	TIMESTAMP	java.sql.Timestamp
+varbinary	VARBINARY	byte[]
+varchar nvarchar	VARCHAR	String
+tinyint	TINYINT	short
+uniqueidentifier	CHAR	String

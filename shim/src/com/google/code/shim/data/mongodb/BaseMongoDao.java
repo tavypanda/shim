@@ -11,6 +11,7 @@ import java.util.regex.Pattern;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
 
+import com.google.code.shim.collections.StringKeyMap;
 import com.google.code.shim.data.BaseDao;
 import com.google.code.shim.data.DataAccessException;
 import com.google.code.shim.data.UnavailableException;
@@ -96,7 +97,7 @@ public abstract class BaseMongoDao extends BaseDao {
 	 * 
 	 * @throws DataAccessException
 	 */
-	public List<Map<String,Object>> findMany(Object... queryParms) throws DataAccessException {
+	public List<StringKeyMap> findMany(Object... queryParms) throws DataAccessException {
 		return findManyUsingProperty(getDerivedPropertyName(), queryParms);
 	}
 
@@ -167,7 +168,7 @@ public abstract class BaseMongoDao extends BaseDao {
 	 * @throws DataAccessException
 	 */
 	@SuppressWarnings("unchecked")
-	public Map<String,Object> findOneUsingProperty(String propertyName, Object... queryParms) throws DataAccessException {
+	public StringKeyMap findOneUsingProperty(String propertyName, Object... queryParms) throws DataAccessException {
 		try {
 			String queryJson = getStringProperty(propertyName);
 			if (logger.isDebugEnabled()) {
@@ -193,7 +194,7 @@ public abstract class BaseMongoDao extends BaseDao {
 			}
 			if (result == null)
 				return null;
-			return result.toMap();
+			return new StringKeyMap(result.toMap());
 
 		} catch (Exception e) {
 			throw handleException(e);
@@ -219,7 +220,7 @@ public abstract class BaseMongoDao extends BaseDao {
 	 * @return list of maps. each map represents a mongodb document
 	 * @throws DataAccessException
 	 */
-	public List<Map<String,Object>> findManyUsingProperty(String propertyName, Object... queryParms) throws DataAccessException {
+	public List<StringKeyMap> findManyUsingProperty(String propertyName, Object... queryParms) throws DataAccessException {
 		try {
 			String queryJson = getStringProperty(propertyName);
 			if (logger.isDebugEnabled()) {
@@ -245,9 +246,9 @@ public abstract class BaseMongoDao extends BaseDao {
 				DBObject fields = (DBObject) JSON.parse(fieldsJson);
 				result = coll.find(query, fields);
 			}
-			ArrayList<Map<String,Object>> results = new ArrayList<Map<String,Object>>();
-			for(Map<String,Object> oneResult: results){
-				results.add(oneResult);
+			ArrayList<StringKeyMap> results = new ArrayList<StringKeyMap>();
+			while(result.hasNext()){
+				results.add( new StringKeyMap(result.next().toMap()) );
 			}
 			return results;
 
