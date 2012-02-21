@@ -5,28 +5,29 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
- * LinkedHashMap subclass that represents a labelled list of items returned from a database call.  This class also provides
- * accessor methods that handle type casting, where needed.
+ * This is a LinkedHashMap subclass that is simply a map with String keys, which is a very, very common use case.
+ * As such, this class is syntactic sugar and can be used for any map that represents a labelled list of items.  
+ * This class also provides get methods that handle common type casting, where needed.
  * @author dgau
  *
  */
-public class Row extends LinkedHashMap<String, Object> {
+public class StringKeyMap extends LinkedHashMap<String, Object> {
 
 	private static final long serialVersionUID = 1L;
 
-	public Row() {
+	public StringKeyMap() {
 		super();
 	}
 
-	public Row(int initialCapacity, float loadFactor) {
+	public StringKeyMap(int initialCapacity, float loadFactor) {
 		super(initialCapacity, loadFactor);
 	}
 
-	public Row(int initialCapacity) {
+	public StringKeyMap(int initialCapacity) {
 		super(initialCapacity);
 	}
 
-	public Row(Map<? extends String, ? extends Object> anotherMap) {
+	public StringKeyMap(Map<? extends String, ? extends Object> anotherMap) {
 		super(anotherMap);
 	}
 

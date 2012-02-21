@@ -25,7 +25,7 @@ import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
 import org.json.JSONObject;
 
-import com.google.code.shim.collections.Row;
+import com.google.code.shim.collections.StringKeyMap;
 import com.google.code.shim.data.BaseDao;
 import com.google.code.shim.data.DataAccessException;
 import com.google.code.shim.data.UnavailableException;
@@ -48,9 +48,9 @@ import com.google.code.shim.data.sql.handler.RowListHandler;
  * </p>
  * <ul>
  * <li>Method names should begin with 'get' or 'find'.</li>
- * <li>Methods returning a single {@link Row} of data should either return the {@link Map<String,
+ * <li>Methods returning a single {@link StringKeyMap} of data should either return the {@link Map<String,
  * Object>} or null if the query returned no results.</li>
- * <li>Methods returning multiple {@link Row}s of data should either return a List<{@link Map<String,
+ * <li>Methods returning multiple {@link StringKeyMap}s of data should either return a List<{@link Map<String,
  * Object> }> or Collections.EMPTY_LIST if the query returned no results.</li>
  * <li>Methods returning scalar values should return the scalar or the corresponding empty/null type depending on the
  * type of scalar being returned.</li>
@@ -213,7 +213,7 @@ public abstract class BaseSqlDao extends BaseDao {
 	 * 
 	 * @param queryParms
 	 *            parameters to add to the SQL statement for the query.
-	 * @return a Row containing the data or null if not found.
+	 * @return a StringKeyMap containing the data or null if not found.
 	 * @throws DataAccessException
 	 */
 	public Object selectValueEasily(Object... queryParms) throws DataAccessException {
@@ -281,10 +281,10 @@ public abstract class BaseSqlDao extends BaseDao {
 	 * 
 	 * @param queryParms
 	 *            parameters to add to the SQL statement for the query.
-	 * @return a Row containing the data or null if not found.
+	 * @return a StringKeyMap containing the data or null if not found.
 	 * @throws DataAccessException
 	 */
-	public final Row selectSingleEasily(Object... queryParms) throws DataAccessException {
+	public final StringKeyMap selectSingleEasily(Object... queryParms) throws DataAccessException {
 		// Get the name of the method that called THIS method.
 		String sqlPropName = "sql." + deriveMethodNameFromStackTrace(3);
 		if (logger.isDebugEnabled()) {
@@ -320,10 +320,10 @@ public abstract class BaseSqlDao extends BaseDao {
 	 * 
 	 * @param queryParms
 	 *            parameters to add to the SQL statement for the query.
-	 * @return a Row containing the data or null if not found.
+	 * @return a StringKeyMap containing the data or null if not found.
 	 * @throws DataAccessException
 	 */
-	public final List<Row> selectMultipleEasily(Object... queryParms) throws DataAccessException {
+	public final List<StringKeyMap> selectMultipleEasily(Object... queryParms) throws DataAccessException {
 		String sqlPropname = "sql." + deriveMethodNameFromStackTrace(3);
 		if (logger.isDebugEnabled()) {
 			logger.debug("sql property name: " + sqlPropname);
@@ -377,13 +377,13 @@ public abstract class BaseSqlDao extends BaseDao {
 	 *         insert.
 	 * @throws DataAccessException
 	 */
-	public final Row insertEasily(Map<String, Object> dataToInsert) throws DataAccessException {
+	public final StringKeyMap insertEasily(Map<String, Object> dataToInsert) throws DataAccessException {
 		// Get the name of the method that called THIS method.
 		String sqlPropname = "sql." + deriveMethodNameFromStackTrace(3);
 		if (logger.isDebugEnabled()) {
 			logger.debug("sql property name: " + sqlPropname);
 		}
-		return this.insertUsingProperty(sqlPropname, new Row(dataToInsert));
+		return this.insertUsingProperty(sqlPropname, new StringKeyMap(dataToInsert));
 	}
 
 	/**
@@ -403,7 +403,7 @@ public abstract class BaseSqlDao extends BaseDao {
 		if (logger.isDebugEnabled()) {
 			logger.debug("sql property name: " + sqlPropName);
 		}
-		return this.updateUsingProperty(sqlPropName, new Row(dataToUpdate), criteriaFields);
+		return this.updateUsingProperty(sqlPropName, new StringKeyMap(dataToUpdate), criteriaFields);
 	}
 
 	/**
@@ -631,7 +631,7 @@ public abstract class BaseSqlDao extends BaseDao {
 	 * @throws DataAccessException
 	 *             which may wrap a SQLException or other kind of exception.
 	 */
-	public Row insertUsingProperty(String sqlPropname, Row mapOfData)
+	public StringKeyMap insertUsingProperty(String sqlPropname, StringKeyMap mapOfData)
 		throws DataAccessException {
 
 		String sql = getStringProperty(sqlPropname);
@@ -642,7 +642,7 @@ public abstract class BaseSqlDao extends BaseDao {
 		return insertUsingStatement(sql, mapOfData);
 	}
 
-	public Row insertUsingStatement(String sql, Row mapOfData)
+	public StringKeyMap insertUsingStatement(String sql, StringKeyMap mapOfData)
 		throws DataAccessException {
 		try {
 
@@ -741,7 +741,7 @@ public abstract class BaseSqlDao extends BaseDao {
 	 * @return the number of rows affected
 	 * @throws DataAccessException
 	 */
-	public int updateUsingProperty(String sqlPropname, Row mapOfData, String... criteriaKeys)
+	public int updateUsingProperty(String sqlPropname, StringKeyMap mapOfData, String... criteriaKeys)
 		throws DataAccessException {
 
 		String sql = getStringProperty(sqlPropname);
@@ -751,7 +751,7 @@ public abstract class BaseSqlDao extends BaseDao {
 		return updateUsingStatement(sql, mapOfData, criteriaKeys);
 	}
 
-	public int updateUsingStatement(String sql, Row mapOfData, String... criteriaKeys)
+	public int updateUsingStatement(String sql, StringKeyMap mapOfData, String... criteriaKeys)
 		throws DataAccessException {
 		try {
 
@@ -830,7 +830,7 @@ public abstract class BaseSqlDao extends BaseDao {
 	 *            returns for auto generated keys.
 	 * @throws SQLException
 	 */
-	static void addGeneratedKeysToMap(PreparedStatement statement, Row mapOfData) throws SQLException {
+	static void addGeneratedKeysToMap(PreparedStatement statement, StringKeyMap mapOfData) throws SQLException {
 		// Add generated keys from in the statement.
 		ResultSet genKeys = statement.getGeneratedKeys();
 		try {
@@ -917,11 +917,15 @@ public abstract class BaseSqlDao extends BaseDao {
 
 		} else if (e instanceof SQLException) {
 			SQLException s = (SQLException) e;
-
 			String sqlState = s.getSQLState();
+			
 			if (sqlState == null && s.getCause() != null && s.getCause() instanceof SQLException)
 				sqlState = ((SQLException) s.getCause()).getSQLState();
-
+			
+			logger.error("sqlstate: "+s.getSQLState());
+			logger.error("error code: "+s.getErrorCode());
+			logger.error("message: "+s.getMessage());
+		
 			if (sqlState == null || sqlState.isEmpty()) {
 				DataAccessException dae = new DataAccessException(s);
 				return dae;
