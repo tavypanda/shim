@@ -98,7 +98,7 @@ public abstract class BaseSqlDao extends BaseDao {
 	protected static final Logger logger = LogManager.getLogger(BaseSqlDao.class);
 	private final DataSource ds;
 	private final DialectInfo dialect;
-
+	private boolean parameterMetadataSupport = true;
 	/**
 	 * Every DAO must be instantiated with a reference to a JNDI data source.
 	 * 
@@ -134,6 +134,13 @@ public abstract class BaseSqlDao extends BaseDao {
 		} catch (IOException e) {
 			throw new DataAccessException(e);
 		}
+	}
+	/**
+	 * Adjust whether the driver supports parameter metadata (some don't).  Defaults to true.
+	 * @param driverSupportsParameterMetadata
+	 */
+	public void setParameterMetadataSupport(boolean driverSupportsParameterMetadata){
+		parameterMetadataSupport = driverSupportsParameterMetadata;
 	}
 
 	/**
@@ -240,7 +247,7 @@ public abstract class BaseSqlDao extends BaseDao {
 	public Object selectValueUsingProperty(String sqlPropname, Object... queryParms) throws DataAccessException {
 		try {
 			String sql = buildSelectSQL(getSQLFromProperty(sqlPropname), queryParms);
-			QueryRunner qr = new QueryRunner(getDataSource());
+			QueryRunner qr = new QueryRunner(getDataSource(),!parameterMetadataSupport);
 			return qr.query(sql, new ScalarHandler(), queryParms);
 		} catch (Exception e) {
 			throw handleException(e);
@@ -265,7 +272,7 @@ public abstract class BaseSqlDao extends BaseDao {
 		Object... queryParms) throws DataAccessException {
 		try {
 			String sql = buildSelectSQL(getSQLFromProperty(sqlPropname), messageParms, queryParms);
-			QueryRunner qr = new QueryRunner(getDataSource());
+			QueryRunner qr = new QueryRunner(getDataSource(),!parameterMetadataSupport);
 			return qr.query(sql, new ScalarHandler(), queryParms);
 		} catch (Exception e) {
 			throw handleException(e);
@@ -422,7 +429,7 @@ public abstract class BaseSqlDao extends BaseDao {
 		throws DataAccessException {
 		try {
 			String sql = buildSelectSQL(getSQLFromProperty(sqlPropname), queryParms);
-			QueryRunner qr = new QueryRunner(getDataSource());
+			QueryRunner qr = new QueryRunner(getDataSource(),!parameterMetadataSupport);
 			return qr.query(sql, handler, queryParms);
 		} catch (Exception e) {
 			throw handleException(e);
@@ -543,7 +550,7 @@ public abstract class BaseSqlDao extends BaseDao {
 		throws DataAccessException {
 		try {
 			String sql = buildSelectSQL(getSQLFromProperty(sqlPropname), queryParms);
-			QueryRunner qr = new QueryRunner(getDataSource());
+			QueryRunner qr = new QueryRunner(getDataSource(),!parameterMetadataSupport);
 			return qr.query(sql, handler, queryParms);
 
 		} catch (Exception e) {
@@ -567,7 +574,7 @@ public abstract class BaseSqlDao extends BaseDao {
 		throws DataAccessException {
 		try {
 			buildSelectSQL(sql, queryParms);
-			QueryRunner qr = new QueryRunner(getDataSource());
+			QueryRunner qr = new QueryRunner(getDataSource(),!parameterMetadataSupport);
 			return qr.query(sql, handler, queryParms);
 		} catch (Exception e) {
 			throw handleException(e);
@@ -591,7 +598,7 @@ public abstract class BaseSqlDao extends BaseDao {
 		try {
 
 			buildSelectSQL(sql, queryParms);
-			QueryRunner qr = new QueryRunner(getDataSource());
+			QueryRunner qr = new QueryRunner(getDataSource(),!parameterMetadataSupport);
 			return qr.query(sql, handler, queryParms);
 			
 		} catch (Exception e) {
@@ -610,7 +617,7 @@ public abstract class BaseSqlDao extends BaseDao {
 		try {
 
 			buildSelectSQL(sql, queryParms);
-			QueryRunner qr = new QueryRunner(getDataSource());
+			QueryRunner qr = new QueryRunner(getDataSource(),!parameterMetadataSupport);
 			JSONObject results = qr.query(sql, new JsonObjectHandler(), queryParms);
 
 			return results;
@@ -681,7 +688,7 @@ public abstract class BaseSqlDao extends BaseDao {
 				theValues[p] = obj;
 			}
 
-			QueryRunner qr = new QueryRunner(getDataSource());
+			QueryRunner qr = new QueryRunner(getDataSource(),!parameterMetadataSupport);
 			Connection conn = null;
 			PreparedStatement insert = null;
 			try {
@@ -785,7 +792,7 @@ public abstract class BaseSqlDao extends BaseDao {
 			// out.
 			sql = sql.replaceAll(",\\s*,", ",");
 
-			QueryRunner qr = new QueryRunner(getDataSource());
+			QueryRunner qr = new QueryRunner(getDataSource(),!parameterMetadataSupport);
 			Connection conn = null;
 			PreparedStatement update = null;
 			try {
@@ -874,7 +881,7 @@ public abstract class BaseSqlDao extends BaseDao {
 				logger.debug("sql property value: " + sql);
 			}
 
-			QueryRunner qr = new QueryRunner(getDataSource());
+			QueryRunner qr = new QueryRunner(getDataSource(),!parameterMetadataSupport);
 
 			if (logger.isDebugEnabled()) {
 				logger.debug("delete sql: " + sql);

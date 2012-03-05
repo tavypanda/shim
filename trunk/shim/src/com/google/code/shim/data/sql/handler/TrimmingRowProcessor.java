@@ -62,7 +62,8 @@ public class TrimmingRowProcessor extends BasicRowProcessor {
 			Object mapped = mapper.mapValue(columnType, rs.getObject(i));
 			String columnName = rsmd.getColumnName(i).toLowerCase();
 			if (trimAll) {
-
+				// Trim the whitespace.
+				mapped = ((String) mapped).trim();
 			} else {
 				int whichColumn = Arrays.binarySearch(columns, columnName);
 				if (whichColumn > 0 && mapped != null && mapped instanceof String) {
