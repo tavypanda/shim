@@ -22,6 +22,8 @@ public class DataSeries {
 	private final String name;
 	private final Number[] series;
 	private Integer[] pctSeries;
+	private String[] labels;
+	
 	public DataSeries(String n, Number[] s){
 		name = n;
 		series = s;
@@ -41,7 +43,7 @@ public class DataSeries {
 		}
 	}
 	
-
+	
 	/**
 	 * @return the pctMin
 	 */
@@ -113,6 +115,21 @@ public class DataSeries {
 		return pctSeries;
 	}
 
+	/**
+	 * Outputs a string consistent with the google charts API, listing a comma separated set of series values (in normalized pct form)
+	 * @see #getPctSeries()
+	 * @return
+	 */
+	public String getPctSeriesString(){
+		StringBuilder s=new StringBuilder();
+		for(int i=0;i<pctSeries.length; i++){
+			s.append(pctSeries[i]);
+			if(i<pctSeries.length-1){
+				s.append(",");
+			}
+		}
+		return s.toString();
+	}
 
 	private static Number[] findMinMaxAvg( Number[] s) {
 		Double min = Double.MAX_VALUE;

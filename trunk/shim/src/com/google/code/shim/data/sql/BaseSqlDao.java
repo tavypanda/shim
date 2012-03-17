@@ -108,7 +108,8 @@ public abstract class BaseSqlDao extends BaseDao {
 	public BaseSqlDao(DataSource injectedDs) throws DataAccessException {
 		super();
 		this.ds = injectedDs;
-		logger.info("Assuming generic database dialect.");
+		if(logger.isDebugEnabled())
+			logger.debug("Assuming generic database dialect.");
 		try {
 			dialect = new DialectInfo();
 		} catch (IOException e) {
@@ -271,7 +272,7 @@ public abstract class BaseSqlDao extends BaseDao {
 	public Object selectValueUsingPropertyAndMessageParms(String sqlPropname, Object[] messageParms,
 		Object... queryParms) throws DataAccessException {
 		try {
-			String sql = buildSelectSQL(getSQLFromProperty(sqlPropname), messageParms, queryParms);
+			String sql = buildSelectSQL(getSQLFromProperty(sqlPropname), messageParms);
 			QueryRunner qr = new QueryRunner(getDataSource(),!parameterMetadataSupport);
 			return qr.query(sql, new ScalarHandler(), queryParms);
 		} catch (Exception e) {
@@ -447,21 +448,20 @@ public abstract class BaseSqlDao extends BaseDao {
 	}
 
 	/**
-	 * Builds and returns a complete SQL statement when the statement template contains both MessageFormat parameters
-	 * and SQL parameters.
+	 * Builds and returns a complete SQL statement when the statement template contain both MessageFormat parameters.
+	 * This most commonly occurs when you need to populate a comma-separated list of values for a SQL WHERE IN and the
+	 * jdbc replacement parameter '?' will not suffice.  In that use case  This method handles escaping of single-quotes (if any) in the statement
+	 * to ensure the {@link MessageFormat#format(String, Object...) } method does not destroy them.
 	 * 
 	 * @param sql
 	 *            base statement that may contain escapes for the sql.defaultColumns property.
 	 * @param messageParms
 	 *            , if any to be spliced in to the SQL statement if it contains the '{n}' message format parameters. If
 	 *            you have no message parms strings to specify, use {@link #buildSelectSQL(String, Object...)} instead.
-	 * @param queryParms
-	 *            these are the actual query replacement parameters that will be substituted for the '?' characters in
-	 *            the JDBC sql statement.
 	 * 
 	 * @return sql with any additional column modifications spliced in.
 	 */
-	protected String buildSelectSQL(String sql, Object[] messageParms, Object... queryParms) {
+	protected String buildSelectSQL(String sql, Object... messageParms) {
 
 		if (messageParms != null && messageParms.length > 0) {
 			// First escape all the single quotes so the message format mechanism doesn't destroy them.
@@ -469,73 +469,11 @@ public abstract class BaseSqlDao extends BaseDao {
 			sql = MessageFormat.format(sql, messageParms);
 		}
 
-		if (logger.isDebugEnabled()) {
-			logger.debug("select sql: " + sql);
-			StringBuilder vals = new StringBuilder();
-			vals.append("[");
-			if (queryParms != null) {
-				for (Object val : queryParms) {
-					vals.append(val);
-					vals.append(", ");
-				}
-				if (vals.toString().endsWith(", ")) {
-					vals.setLength(vals.length() - 2);
-				}
-			}
-			vals.append("]");
-			logger.debug("     parms: " + vals.toString());
-
-		}
+		
 
 		return sql;
 
 	}
-
-	/**
-	 * Builds and returns a complete SQL statement
-	 * 
-	 * @param sql
-	 *            base statement that may contain escapes for the sql.defaultColumns property.
-	 * @param queryParms
-	 *            these are the actual query replacement parameters that will be substituted for the '?' characters in
-	 *            the JDBC sql statement.
-	 * 
-	 * @return sql with any additional column modifications spliced in.
-	 */
-	protected String buildSelectSQL(String sql, Object... queryParms) {
-
-		// Do we need default columns?
-		if (sql.contains("{0[\\w]*}")) {
-			String columnsString = getStringProperty("sql.defaultColumns");
-			if (logger.isDebugEnabled()) {
-				logger.debug("splicing default columns: " + columnsString);
-			}
-			sql = MessageFormat.format(sql, columnsString);
-		}
-
-		if (logger.isDebugEnabled()) {
-			logger.debug("select sql: " + sql);
-			StringBuilder vals = new StringBuilder();
-			vals.append("[");
-			if (queryParms != null) {
-				for (Object val : queryParms) {
-					vals.append(val);
-					vals.append(", ");
-				}
-				if (vals.toString().endsWith(", ")) {
-					vals.setLength(vals.length() - 2);
-				}
-			}
-			vals.append("]");
-			logger.debug("     parms: " + vals.toString());
-
-		}
-
-		return sql;
-
-	}
-
-	
 
 	
 	/**
