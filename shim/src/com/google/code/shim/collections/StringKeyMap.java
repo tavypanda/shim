@@ -125,5 +125,16 @@ public class StringKeyMap extends LinkedHashMap<String, Object> {
 		if(v==null) return defaultWhenNull;
 		return v;
 	}
+	/**
+	 * Gets an object from the map, but returns the default when null is returned.
+	 * @param key
+	 * @param defaultWhenNull
+	 * @return
+	 */
+	public Object get(String key, Object defaultWhenNull){
+		Object v = get(key);
+		if(v==null) return defaultWhenNull;
+		return v;
+	}
 	
 }
