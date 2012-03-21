@@ -469,7 +469,9 @@ public abstract class BaseSqlDao extends BaseDao {
 			sql = MessageFormat.format(sql, messageParms);
 		}
 
-		
+		if(logger.isDebugEnabled()){
+			logger.debug("sql before execution: "+sql);
+		}
 
 		return sql;
 
