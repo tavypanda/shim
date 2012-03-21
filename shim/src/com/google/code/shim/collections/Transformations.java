@@ -1,5 +1,6 @@
 package com.google.code.shim.collections;
 
+import java.lang.reflect.Array;
 import java.sql.ResultSet;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -70,6 +71,31 @@ public class Transformations {
 				return 0;
 			}
 		});
+	}
+	
+	/**
+	 * Creates a map of key/values where the key is given by the keyKey attribute name and the value is given by
+	 * the valueKey attribute name.  This is useful for creating cross-reference maps from returned data tables.
+	 * Note that the map will contain the last value associated with the given key
+	 * according to the iteration order of the data table.
+	 * @param dataTable containing the data from which to build the map
+	 * @param keyKey
+	 * @param valueKey
+	 * @return a map of the keys and values found in the table
+	 */
+	public static <T, V> Map<T,V> createMap(List<StringKeyMap> dataTable, String keyKey, String valueKey){
+		LinkedHashMap<T,V> map = new LinkedHashMap<T,V>();
+		for(StringKeyMap row: dataTable){
+			
+			@SuppressWarnings("unchecked")
+			T  theKey = (T) row.get(keyKey);
+			
+			@SuppressWarnings("unchecked")
+			V  theValue = (V) row.get(valueKey);
+			
+			map.put(theKey, theValue);
+		}
+		return map;
 	}
 	
 	/**
@@ -381,17 +407,23 @@ public class Transformations {
 	}
 	/**
 	 * Returns the distinct values across the whole data table for the given table key.
+	 * @param <T>
 	 * @param dataTable
 	 * @param tableKey
-	 * @return
+	 * @return the array, sorted in natural ascending order.
 	 */
-	public static Object[] distinctValuesFrom(List<StringKeyMap> dataTable, String tableKey){
-		HashSet<Object> vals = new HashSet<Object>();
+	public static Object[] distinctValuesFrom(List<StringKeyMap> dataTable, String tableKey ){
+		LinkedHashSet<Object> vals = new LinkedHashSet<Object>();
 		for(StringKeyMap row: dataTable){
-			vals.add(row.get(tableKey,EMPTY_PIVOT_VALUE));
+			vals.add( row.get(tableKey,EMPTY_PIVOT_VALUE));
 		}
-		return vals.toArray(new Object[vals.size()]);
+	
+		Object[] result = vals.toArray(new Object[vals.size()]);
+		Arrays.sort(result);
+		return result;
 	}
+	
+	
 	public static final void main(String[] args) {
 		try {
 			String filename = null;
