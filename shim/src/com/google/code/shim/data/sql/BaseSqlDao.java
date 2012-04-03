@@ -8,13 +8,9 @@ import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.text.MessageFormat;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import javax.naming.Context;
-import javax.naming.InitialContext;
-import javax.naming.NamingException;
 import javax.sql.DataSource;
 
 import org.apache.commons.dbutils.DbUtils;
@@ -23,13 +19,11 @@ import org.apache.commons.dbutils.ResultSetHandler;
 import org.apache.commons.dbutils.handlers.ScalarHandler;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
-import org.json.JSONObject;
 
 import com.google.code.shim.collections.StringKeyMap;
 import com.google.code.shim.data.BaseDao;
 import com.google.code.shim.data.DataAccessException;
 import com.google.code.shim.data.UnavailableException;
-import com.google.code.shim.data.sql.handler.JsonObjectHandler;
 import com.google.code.shim.data.sql.handler.RowHandler;
 import com.google.code.shim.data.sql.handler.RowListHandler;
 
@@ -48,10 +42,10 @@ import com.google.code.shim.data.sql.handler.RowListHandler;
  * </p>
  * <ul>
  * <li>Method names should begin with 'get' or 'find'.</li>
- * <li>Methods returning a single {@link StringKeyMap} of data should either return the {@link Map<String,
- * Object>} or null if the query returned no results.</li>
- * <li>Methods returning multiple {@link StringKeyMap}s of data should either return a List<{@link Map<String,
- * Object> }> or Collections.EMPTY_LIST if the query returned no results.</li>
+ * <li>Methods returning a single {@link StringKeyMap} of data should either return the {@link Map<String, Object>} or
+ * null if the query returned no results.</li>
+ * <li>Methods returning multiple {@link StringKeyMap}s of data should either return a List<{@link Map<String, Object> }
+ * > or Collections.EMPTY_LIST if the query returned no results.</li>
  * <li>Methods returning scalar values should return the scalar or the corresponding empty/null type depending on the
  * type of scalar being returned.</li>
  * </ul>
@@ -99,6 +93,7 @@ public abstract class BaseSqlDao extends BaseDao {
 	private final DataSource ds;
 	private final DialectInfo dialect;
 	private boolean parameterMetadataSupport = true;
+
 	/**
 	 * Every DAO must be instantiated with a reference to a JNDI data source.
 	 * 
@@ -108,7 +103,7 @@ public abstract class BaseSqlDao extends BaseDao {
 	public BaseSqlDao(DataSource injectedDs) throws DataAccessException {
 		super();
 		this.ds = injectedDs;
-		if(logger.isDebugEnabled())
+		if (logger.isDebugEnabled())
 			logger.debug("Assuming generic database dialect.");
 		try {
 			dialect = new DialectInfo();
@@ -136,72 +131,14 @@ public abstract class BaseSqlDao extends BaseDao {
 			throw new DataAccessException(e);
 		}
 	}
+
 	/**
-	 * Adjust whether the driver supports parameter metadata (some don't).  Defaults to true.
+	 * Adjust whether the driver supports parameter metadata (some don't). Defaults to true.
+	 * 
 	 * @param driverSupportsParameterMetadata
 	 */
-	public void setParameterMetadataSupport(boolean driverSupportsParameterMetadata){
+	public void setParameterMetadataSupport(boolean driverSupportsParameterMetadata) {
 		parameterMetadataSupport = driverSupportsParameterMetadata;
-	}
-
-	/**
-	 * Every DAO must be instantiated with a reference to a JNDI data source.
-	 * 
-	 * <p>
-	 * This constructor accepts a string that specifies the JNDI datasource name which will be used to lookup the
-	 * datasource.
-	 * </p>
-	 * 
-	 * 
-	 * @param dsName
-	 * @throws DataAccessException
-	 *             when a datasource cannot be returned
-	 */
-	public BaseSqlDao(String dsName) throws DataAccessException {
-		super();
-		try {
-			Context ctx = new InitialContext();
-			this.ds = (DataSource) ctx.lookup(dsName);
-			logger.info("Assuming generic database dialect.");
-			try {
-				dialect = new DialectInfo();
-			} catch (IOException e) {
-				throw new DataAccessException(e);
-			}
-		} catch (NamingException e) {
-			throw handleException(e);
-		}
-	}
-
-	/**
-	 * Every DAO must be instantiated with a reference to a JNDI data source.
-	 * 
-	 * <p>
-	 * This constructor accepts a string that specifies the JNDI datasource name which will be used to lookup the
-	 * datasource, as well as the sql dialect name if you are using a dialect-specific extension.
-	 * </p>
-	 * 
-	 * 
-	 * @param dsName
-	 * @param dialectName
-	 * @throws DataAccessException
-	 */
-	public BaseSqlDao(String dsName, String dialectName) throws DataAccessException {
-		super();
-		try {
-			Context ctx = new InitialContext();
-			this.ds = (DataSource) ctx.lookup(dsName);
-			if (dialectName == null || "".equals(dialectName.trim())) {
-				throw new DataAccessException("Dialect was not specified.");
-			}
-			try {
-				this.dialect = new DialectInfo(dialectName);
-			} catch (IOException e) {
-				throw new DataAccessException(e);
-			}
-		} catch (NamingException e) {
-			throw handleException(e);
-		}
 	}
 
 	/**
@@ -213,18 +150,25 @@ public abstract class BaseSqlDao extends BaseDao {
 		return this.ds;
 	}
 
+	//
+	// Select value methods
+	//
+
 	/**
-	 * Executes a query that returns a single scalar value. The query is specified by a property that is derived by
-	 * concatenating "sql." with the calling method name. Thus if you invoke this method from inside a method named
-	 * getMyValue, it will look for the sql statement in the properties file under the property, "sql.getMyValue". This
-	 * convention can be useful when managing SQL in a property file.
+	 * <p>
+	 * Queries a single scalar value. By convention, the method will assume a property exists of the form:
+	 * </p>
+	 * <code>sql.[callingMethodName]</code>
+	 * <p>
+	 * that contains the SQL for this query
+	 * </p>
 	 * 
 	 * @param queryParms
 	 *            parameters to add to the SQL statement for the query.
 	 * @return a StringKeyMap containing the data or null if not found.
 	 * @throws DataAccessException
 	 */
-	public Object selectValueEasily(Object... queryParms) throws DataAccessException {
+	public <T> T selectValueEasily(Object... queryParms) throws DataAccessException {
 		// Get the name of the method that called THIS method.
 		String callingMethodName = Thread.currentThread().getStackTrace()[2].getMethodName();
 		String sqlPropname = "sql." + callingMethodName;
@@ -245,174 +189,20 @@ public abstract class BaseSqlDao extends BaseDao {
 	 * @return
 	 * @throws DataAccessException
 	 */
-	public Object selectValueUsingProperty(String sqlPropname, Object... queryParms) throws DataAccessException {
+	@SuppressWarnings("unchecked")
+	public <T> T selectValueUsingProperty(String sqlPropname, Object... queryParms) throws DataAccessException {
 		try {
-			String sql = buildSelectSQL(getSQLFromProperty(sqlPropname), queryParms);
-			QueryRunner qr = new QueryRunner(getDataSource(),!parameterMetadataSupport);
-			return qr.query(sql, new ScalarHandler(), queryParms);
+			String sql = getStringProperty(sqlPropname);
+			QueryRunner qr = new QueryRunner(getDataSource(), !parameterMetadataSupport);
+			return (T) qr.query(sql, new ScalarHandler(), queryParms);
 		} catch (Exception e) {
 			throw handleException(e);
 		}
 	}
 
-	/**
-	 * Executes a query containing java message resource parameters, that returns a single scalar value. The query is
-	 * specified by a property name.
-	 * 
-	 * @param sqlPropname
-	 *            the property in the property file for this DAO that contains the SQL statement to use
-	 * @param messageParms
-	 *            message parameters to substitute into the statement at the parameter locations ( replacing parameters
-	 *            as given by the #java.text.MessageFormat documentation ).
-	 * @param queryParms
-	 *            parameters to be used in the SQL (replacing the placeholder '?' in each the SQL statement)
-	 * @return
-	 * @throws DataAccessException
-	 */
-	public Object selectValueUsingPropertyAndMessageParms(String sqlPropname, Object[] messageParms,
-		Object... queryParms) throws DataAccessException {
-		try {
-			String sql = buildSelectSQL(getSQLFromProperty(sqlPropname), messageParms);
-			QueryRunner qr = new QueryRunner(getDataSource(),!parameterMetadataSupport);
-			return qr.query(sql, new ScalarHandler(), queryParms);
-		} catch (Exception e) {
-			throw handleException(e);
-		}
-	}
-
-	/**
-	 * Returns a single map containing data for a row in a database table. Similar to the
-	 * {@link #selectSingleUsingProperty(String, Object...)} method except that the property name is derived by
-	 * concatenating "sql." + the calling method name. Thus if you call this getOne method from inside a method named
-	 * getCustomerById, it will look for the sql statement in the properties file under the property,
-	 * "sql.getCustomerById". This is a good way to implement a consistent naming convention for all your daos.
-	 * 
-	 * @param queryParms
-	 *            parameters to add to the SQL statement for the query.
-	 * @return a StringKeyMap containing the data or null if not found.
-	 * @throws DataAccessException
-	 */
-	public final StringKeyMap selectSingleEasily(Object... queryParms) throws DataAccessException {
-		// Get the name of the method that called THIS method.
-		String sqlPropName = "sql." + deriveMethodNameFromStackTrace(3);
-		if (logger.isDebugEnabled()) {
-			logger.debug("sql property name: " + sqlPropName);
-		}
-
-		return selectSingleUsingProperty(new RowHandler(), sqlPropName, queryParms);
-	}
-	/**
-	 * Queries a single row from the database.
-	 * @param handler controls the form of output returned
-	 * @param queryParms   parameters to add to the SQL statement for the query.
-	 * @return the output of the single row, controlled by the handler
-	 * @throws DataAccessException
-	 */
-	public final <T> T selectSingleEasily(ResultSetHandler<T> handler, Object... queryParms) throws DataAccessException {
-		// Get the name of the method that called THIS method.
-		String sqlPropName = "sql." + deriveMethodNameFromStackTrace(3);
-		if (logger.isDebugEnabled()) {
-			logger.debug("sql property name: " + sqlPropName);
-		}
-
-		return selectSingleUsingProperty(handler, sqlPropName, queryParms);
-	}
-
-
-	/**
-	 * Returns a list of maps containing data for several rows in a database table. Similar to the
-	 * {@link #selectMultipleUsingProperty(String, Object...) } method except that the property name is derived by
-	 * concatenating "sql." + the enclosing method name. Thus if you call this getOne method from inside a method named
-	 * getCustomerById, it will look for the sql statement in the properties file under the property,
-	 * "sql.getCustomerById". This is a good way to implement a consistent naming convention for all your daos.
-	 * 
-	 * @param queryParms
-	 *            parameters to add to the SQL statement for the query.
-	 * @return a StringKeyMap containing the data or null if not found.
-	 * @throws DataAccessException
-	 */
-	public final List<StringKeyMap> selectMultipleEasily(Object... queryParms) throws DataAccessException {
-		String sqlPropname = "sql." + deriveMethodNameFromStackTrace(3);
-		if (logger.isDebugEnabled()) {
-			logger.debug("sql property name: " + sqlPropname);
-		}
-
-		return selectMultipleUsingProperty(new RowListHandler(), sqlPropname, queryParms);
-	}
-
-	/**
-	 * 
-	 * @param handler
-	 * @param queryParms
-	 * @return
-	 * @throws DataAccessException
-	 */
-	public final <T> T selectMultipleEasily(ResultSetHandler<T> handler, Object... queryParms) throws DataAccessException {
-		String sqlPropname = "sql." + deriveMethodNameFromStackTrace(3);
-		if (logger.isDebugEnabled()) {
-			logger.debug("sql property name: " + sqlPropname);
-		}
-
-		return selectMultipleUsingProperty(handler, sqlPropname, queryParms);
-	}
-	 
-
-	/**
-	 * Issues a delete statement. By convention, the method will assume a property exists of the form: "sql." + [name of
-	 * method that called this method].
-	 * 
-	 * @param queryParms
-	 *            parameters to be passed into the sql statement.
-	 * @return number of rows affected.
-	 * @throws DataAccessException
-	 */
-	public final int deleteEasily(Object... queryParms) throws DataAccessException {
-		// Get the name of the method that called THIS method.
-		String sqlPropname = "sql." + deriveMethodNameFromStackTrace(3);
-		if (logger.isDebugEnabled()) {
-			logger.debug("sql property name: " + sqlPropname);
-		}
-		return this.deleteUsingProperty(sqlPropname, queryParms);
-	}
-
-	/**
-	 * Issues an insert statement. By convention, the method will assume a property exists of the form: "sql." + [name
-	 * of method that called this method].
-	 * 
-	 * @param dataToInsert
-	 *            data to be inserted, keyed by column names.
-	 * @return map of the data after insert, which may now contain any generated keys that were generated during the
-	 *         insert.
-	 * @throws DataAccessException
-	 */
-	public final StringKeyMap insertEasily(Map<String, Object> dataToInsert) throws DataAccessException {
-		// Get the name of the method that called THIS method.
-		String sqlPropname = "sql." + deriveMethodNameFromStackTrace(3);
-		if (logger.isDebugEnabled()) {
-			logger.debug("sql property name: " + sqlPropname);
-		}
-		return this.insertUsingProperty(sqlPropname, new StringKeyMap(dataToInsert));
-	}
-
-	/**
-	 * Issues an update statement. By convention, the method will assume a property exists of the form: "sql." + [name
-	 * of method that called this method].
-	 * 
-	 * @param dataToUpdate
-	 *            map of data containing data to update AND the criteria values for the update.
-	 * @param criteriaFields
-	 *            database column names for the map data to be used as the criteria in the where clause
-	 * @return number of rows updated
-	 * @throws DataAccessException
-	 */
-	public final int updateEasily(Map<String, Object> dataToUpdate, String... criteriaFields) throws DataAccessException {
-		// Get the name of the method that called THIS method.
-		String sqlPropName = "sql." + deriveMethodNameFromStackTrace(3);
-		if (logger.isDebugEnabled()) {
-			logger.debug("sql property name: " + sqlPropName);
-		}
-		return this.updateUsingProperty(sqlPropName, new StringKeyMap(dataToUpdate), criteriaFields);
-	}
+	//
+	// Select single methods...
+	//
 
 	/**
 	 * Issues a select statement that returns a single row from the database.
@@ -429,57 +219,147 @@ public abstract class BaseSqlDao extends BaseDao {
 	public <T> T selectSingleUsingProperty(ResultSetHandler<T> handler, String sqlPropname, Object... queryParms)
 		throws DataAccessException {
 		try {
-			String sql = buildSelectSQL(getSQLFromProperty(sqlPropname), queryParms);
-			QueryRunner qr = new QueryRunner(getDataSource(),!parameterMetadataSupport);
+			String sql = getStringProperty(sqlPropname);
+			QueryRunner qr = new QueryRunner(getDataSource(), !parameterMetadataSupport);
 			return qr.query(sql, handler, queryParms);
 		} catch (Exception e) {
 			throw handleException(e);
 		}
 	}
 
-	
+	/**
+	 * Issues a select statement that returns a single row of data.
+	 * 
+	 * @param handler
+	 *            produces the correct return type of output
+	 * @param sql
+	 *            the parameterized SQL select statement.
+	 * @param queryParms
+	 *            object array of parameters to be passed into the statement.
+	 * @return the returned type specified by the handler
+	 * @throws DataAccessException
+	 */
+	public <T> T selectSingleUsingStatement(ResultSetHandler<T> handler, String sql, Object... queryParms)
+		throws DataAccessException {
+		try {
 
-	private String getSQLFromProperty(String sqlPropName) {
-		String sql = getStringProperty(sqlPropName);
-		if (logger.isDebugEnabled()) {
-			logger.debug("sql property value: " + sql);
+			QueryRunner qr = new QueryRunner(getDataSource(), !parameterMetadataSupport);
+			return qr.query(sql, handler, queryParms);
+
+		} catch (Exception e) {
+			throw handleException(e);
 		}
-		return sql;
 	}
 
 	/**
-	 * Builds and returns a complete SQL statement when the statement template contain both MessageFormat parameters.
-	 * This most commonly occurs when you need to populate a comma-separated list of values for a SQL WHERE IN and the
-	 * jdbc replacement parameter '?' will not suffice.  In that use case  This method handles escaping of single-quotes (if any) in the statement
-	 * to ensure the {@link MessageFormat#format(String, Object...) } method does not destroy them.
+	 * <p>
+	 * Queries a single row from the database. By convention, the method will assume a property exists of the form:
+	 * </p>
+	 * <code>sql.[callingMethodName]</code>
+	 * <p>
+	 * that contains the SQL for this query
+	 * </p>
 	 * 
-	 * @param sql
-	 *            base statement that may contain escapes for the sql.defaultColumns property.
-	 * @param messageParms
-	 *            , if any to be spliced in to the SQL statement if it contains the '{n}' message format parameters. If
-	 *            you have no message parms strings to specify, use {@link #buildSelectSQL(String, Object...)} instead.
 	 * 
-	 * @return sql with any additional column modifications spliced in.
+	 * @param queryParms
+	 *            parameters to add to the SQL statement for the query.
+	 * @return a StringKeyMap containing the data or null if not found.
+	 * @throws DataAccessException
 	 */
-	protected String buildSelectSQL(String sql, Object... messageParms) {
-
-		if (messageParms != null && messageParms.length > 0) {
-			// First escape all the single quotes so the message format mechanism doesn't destroy them.
-			sql = sql.replaceAll("'", "''");
-			sql = MessageFormat.format(sql, messageParms);
+	public final StringKeyMap selectSingleEasily(Object... queryParms) throws DataAccessException {
+		// Get the name of the method that called THIS method.
+		String sqlPropName = "sql." + deriveMethodNameFromStackTrace(3);
+		if (logger.isDebugEnabled()) {
+			logger.debug("sql property name: " + sqlPropName);
 		}
 
-		if(logger.isDebugEnabled()){
-			logger.debug("sql before execution: "+sql);
-		}
-
-		return sql;
-
+		return selectSingleUsingProperty(new RowHandler(), sqlPropName, queryParms);
 	}
 
-	
+	/**
+	 * 
+	 * <p>
+	 * Queries a single row from the database. By convention, the method will assume a property exists of the form:
+	 * </p>
+	 * <code>sql.[callingMethodName]</code>
+	 * <p>
+	 * that contains the SQL for this query
+	 * </p>
+	 * 
+	 * @param handler
+	 *            controls the form of output returned
+	 * @param queryParms
+	 *            parameters to add to the SQL statement for the query.
+	 * @return the output of the single row, controlled by the handler
+	 * @throws DataAccessException
+	 */
+	public final <T> T selectSingleEasily(ResultSetHandler<T> handler, Object... queryParms) throws DataAccessException {
+		// Get the name of the method that called THIS method.
+		String sqlPropName = "sql." + deriveMethodNameFromStackTrace(3);
+		if (logger.isDebugEnabled()) {
+			logger.debug("sql property name: " + sqlPropName);
+		}
+
+		return selectSingleUsingProperty(handler, sqlPropName, queryParms);
+	}
+
+	//
+	// Select multiple methods...
+	//
+
+	/**
+	 * <p>
+	 * Retrieves several rows from a database table, returning a list of maps. By convention, the method will assume a
+	 * property exists of the form:
+	 * </p>
+	 * <code>sql.[callingMethodName]</code>
+	 * <p>
+	 * that contains the SQL for this query
+	 * </p>
+	 * 
+	 * @param queryParms
+	 *            parameters to add to the SQL statement for the query.
+	 * @return a StringKeyMap containing the data or null if not found.
+	 * @throws DataAccessException
+	 */
+	public final List<StringKeyMap> selectMultipleEasily(Object... queryParms) throws DataAccessException {
+		String sqlPropname = "sql." + deriveMethodNameFromStackTrace(3);
+		if (logger.isDebugEnabled()) {
+			logger.debug("sql property name: " + sqlPropname);
+		}
+
+		return selectMultipleUsingProperty(new RowListHandler(), sqlPropname, queryParms);
+	}
+
+	/**
+	 * <p>
+	 * Retrieves several rows from a database table. By convention, the method will assume a property exists of the
+	 * form:
+	 * </p>
+	 * <code>sql.[callingMethodName]</code>
+	 * <p>
+	 * that contains the SQL for this query
+	 * </p>
+	 * 
+	 * @param handler
+	 *            responsible for generating the return type from the underlying ResultSet
+	 * @param queryParms
+	 * @return
+	 * @throws DataAccessException
+	 */
+	public final <T> T selectMultipleEasily(ResultSetHandler<T> handler, Object... queryParms)
+		throws DataAccessException {
+		String sqlPropname = "sql." + deriveMethodNameFromStackTrace(3);
+		if (logger.isDebugEnabled()) {
+			logger.debug("sql property name: " + sqlPropname);
+		}
+
+		return selectMultipleUsingProperty(handler, sqlPropname, queryParms);
+	}
+
 	/**
 	 * Parameterized method allows the specification fo a result set handler for the query.
+	 * 
 	 * @param handler
 	 * @param sqlPropname
 	 * @param queryParms
@@ -489,8 +369,8 @@ public abstract class BaseSqlDao extends BaseDao {
 	public <T> T selectMultipleUsingProperty(ResultSetHandler<T> handler, String sqlPropname, Object... queryParms)
 		throws DataAccessException {
 		try {
-			String sql = buildSelectSQL(getSQLFromProperty(sqlPropname), queryParms);
-			QueryRunner qr = new QueryRunner(getDataSource(),!parameterMetadataSupport);
+			String sql = getStringProperty(sqlPropname);
+			QueryRunner qr = new QueryRunner(getDataSource(), !parameterMetadataSupport);
 			return qr.query(sql, handler, queryParms);
 
 		} catch (Exception e) {
@@ -498,11 +378,11 @@ public abstract class BaseSqlDao extends BaseDao {
 		}
 	}
 
-	 
 	/**
 	 * Issues a select statement that may return multiple rows.
 	 * 
-	 * @param handler produces the correct return type of output
+	 * @param handler
+	 *            produces the correct return type of output
 	 * @param sql
 	 *            the parameterized SQL select statement.
 	 * @param queryParms
@@ -513,58 +393,16 @@ public abstract class BaseSqlDao extends BaseDao {
 	public <T> T selectMultipleUsingStatement(ResultSetHandler<T> handler, String sql, Object... queryParms)
 		throws DataAccessException {
 		try {
-			buildSelectSQL(sql, queryParms);
-			QueryRunner qr = new QueryRunner(getDataSource(),!parameterMetadataSupport);
+			QueryRunner qr = new QueryRunner(getDataSource(), !parameterMetadataSupport);
 			return qr.query(sql, handler, queryParms);
-		} catch (Exception e) {
-			throw handleException(e);
-		}
-	} 
-	
- 
-	
-	/**
-	 * Issues a select statement that returns a single row of data.
-	 * 
-	 * @param handler produces the correct return type of output
-	 * @param sql
-	 *            the parameterized SQL select statement.
-	 * @param queryParms
-	 *            object array of parameters to be passed into the statement.
-	 * @return the returned type specified by the handler
-	 * @throws DataAccessException
-	 */
-	public  <T> T  selectSingleUsingStatement(ResultSetHandler<T> handler, String sql, Object... queryParms) throws DataAccessException {
-		try {
-
-			buildSelectSQL(sql, queryParms);
-			QueryRunner qr = new QueryRunner(getDataSource(),!parameterMetadataSupport);
-			return qr.query(sql, handler, queryParms);
-			
 		} catch (Exception e) {
 			throw handleException(e);
 		}
 	}
 
-	/**
-	 * 
-	 * @param sql
-	 * @param queryParms
-	 * @return
-	 * @throws DataAccessException
-	 */
-	public JSONObject selectSingleUsingStatementJson(String sql, Object... queryParms) throws DataAccessException {
-		try {
-
-			buildSelectSQL(sql, queryParms);
-			QueryRunner qr = new QueryRunner(getDataSource(),!parameterMetadataSupport);
-			JSONObject results = qr.query(sql, new JsonObjectHandler(), queryParms);
-
-			return results;
-		} catch (Exception e) {
-			throw handleException(e);
-		}
-	}
+	//
+	// Insert methods...
+	//
 
 	/**
 	 * Issues an insert statement.
@@ -589,6 +427,17 @@ public abstract class BaseSqlDao extends BaseDao {
 		return insertUsingStatement(sql, mapOfData);
 	}
 
+	/**
+	 * Issues an insert statement.
+	 * 
+	 * @param sql
+	 *            insert statement
+	 * @param mapOfData
+	 *            data, keyed by column names to be inserted.
+	 * @return the map of data as specified in the parameter, which may now include any auto-generated keys or columns
+	 *         as part of the insert.
+	 * @throws DataAccessException
+	 */
 	public StringKeyMap insertUsingStatement(String sql, StringKeyMap mapOfData)
 		throws DataAccessException {
 		try {
@@ -628,7 +477,7 @@ public abstract class BaseSqlDao extends BaseDao {
 				theValues[p] = obj;
 			}
 
-			QueryRunner qr = new QueryRunner(getDataSource(),!parameterMetadataSupport);
+			QueryRunner qr = new QueryRunner(getDataSource(), !parameterMetadataSupport);
 			Connection conn = null;
 			PreparedStatement insert = null;
 			try {
@@ -670,6 +519,32 @@ public abstract class BaseSqlDao extends BaseDao {
 	}
 
 	/**
+	 * <p>
+	 * Issues an insert statement. By convention, the method will assume a property exists of the form:
+	 * </p>
+	 * <code>sql.[callingMethodName]</code>
+	 * 
+	 * 
+	 * @param dataToInsert
+	 *            data to be inserted, keyed by column names.
+	 * @return map of the data after insert, which may now contain any generated keys that were generated during the
+	 *         insert.
+	 * @throws DataAccessException
+	 */
+	public final StringKeyMap insertEasily(Map<String, Object> dataToInsert) throws DataAccessException {
+		// Get the name of the method that called THIS method.
+		String sqlPropname = "sql." + deriveMethodNameFromStackTrace(3);
+		if (logger.isDebugEnabled()) {
+			logger.debug("sql property name: " + sqlPropname);
+		}
+		return this.insertUsingProperty(sqlPropname, new StringKeyMap(dataToInsert));
+	}
+
+	//
+	// update methods...
+	//
+	
+	/**
 	 * Issues a dynamically-generated update statement, based on the data passed in on the map, and the the indicated
 	 * criteria keys.
 	 * 
@@ -682,57 +557,48 @@ public abstract class BaseSqlDao extends BaseDao {
 	 * @param mapOfData
 	 *            map of data to be updated. Note that this method dynamically builds the SET clause based on the
 	 *            columns given in the map. This map should also contain the data for the criteria keys as well.
-	 * @param criteriaKeys
+	 * @param criteriaColumns
 	 *            database column names for the map data to be used as the criteria in the where clause. In the example
-	 *            above, you would pass <code>"column_a", "column_b"</code> in as the criteria keys.
+	 *            above, you would pass <code>"column_a", "column_b"</code> in as the criteria.
 	 * @return the number of rows affected
 	 * @throws DataAccessException
 	 */
-	public int updateUsingProperty(String sqlPropname, StringKeyMap mapOfData, String... criteriaKeys)
+	public int updateUsingProperty(String sqlPropname, StringKeyMap mapOfData, String... criteriaColumns)
 		throws DataAccessException {
 
 		String sql = getStringProperty(sqlPropname);
 		if (logger.isDebugEnabled()) {
 			logger.debug("sql property value: " + sql);
 		}
-		return updateUsingStatement(sql, mapOfData, criteriaKeys);
+		return updateUsingStatement(sql, mapOfData, criteriaColumns);
 	}
 
-	public int updateUsingStatement(String sql, StringKeyMap mapOfData, String... criteriaKeys)
+	public int updateUsingStatement(String sql, StringKeyMap mapOfData, String... criteriaColumns)
 		throws DataAccessException {
 		try {
-
-			// Fill in the 'set {0}' clause.
-			StringBuilder setClause = new StringBuilder();
-			ArrayList<Object> orderedValues = new ArrayList<Object>();
-			for (String key : mapOfData.keySet()) {
-				boolean isCriteria = false;
-				for (String criteriaKey : criteriaKeys) {
-					if (criteriaKey.equals(key)) {
-						isCriteria = true;
-						break;
-					}
-
-				}
-				if (!isCriteria) {
-					setClause.append(key).append(" = ?,");
-					orderedValues.add(mapOfData.get(key));
-				}
+			Object[] theValues=null;
+			
+			//First parse the sql for a SET ... WHERE
+			sql = sql.toLowerCase();
+			String setClause = sql.substring( sql.indexOf(" set ")+5, sql.indexOf(" where ")+7 );
+			//Remove all whitespace.
+			setClause = setClause.replaceAll("\\s","");
+			String[] setColumns = setClause.split(",");
+			theValues = new Object[setColumns.length + criteriaColumns.length ];
+			int valueIdx=0;
+			for(; valueIdx<setColumns.length; valueIdx++){
+				String setColumn=setColumns[valueIdx];//foo=?
+				String columnName = setColumn.substring(0,setColumn.indexOf('='));
+				theValues[valueIdx]=mapOfData.get(columnName);
 			}
-			// Now, add the criteria fields in order to the ordered values.
-			for (String criteriaKey : criteriaKeys) {
-				orderedValues.add(mapOfData.get(criteriaKey));
+			//Now do the criteria column (i.e. WHERE)
+			for (String criteriaColumn : criteriaColumns) {
+				theValues[valueIdx]=mapOfData.get(criteriaColumn);
+				valueIdx++;
 			}
-			// At this point the ordered values should be ordered perfectly to
-			// match the parameterized statement
-			Object[] theValues = orderedValues.toArray();
-			// Replace the placeholder in the setClause with what we just built.
-			sql = MessageFormat.format(sql, setClause.toString());
-			// Just in case the sql now has consecutive commas in it, trim these
-			// out.
-			sql = sql.replaceAll(",\\s*,", ",");
-
-			QueryRunner qr = new QueryRunner(getDataSource(),!parameterMetadataSupport);
+			//Now we have an array of values that matches all the parms on the sql statement.
+			
+			QueryRunner qr = new QueryRunner(getDataSource(), !parameterMetadataSupport);
 			Connection conn = null;
 			PreparedStatement update = null;
 			try {
@@ -764,6 +630,196 @@ public abstract class BaseSqlDao extends BaseDao {
 
 		} catch (Exception e) {
 			throw handleException(e);
+		}
+	}
+
+	/**
+	 * Issues an update statement. By convention, the method will assume a property exists of the form: "sql." + [name
+	 * of method that called this method].
+	 * 
+	 * @param dataToUpdate
+	 *            map of data containing data to update AND the criteria values for the update.
+	 * @param criteriaFields
+	 *            database column names for the map data to be used as the criteria in the where clause
+	 * @return number of rows updated
+	 * @throws DataAccessException
+	 */
+	public final int updateEasily(Map<String, Object> dataToUpdate, String... criteriaFields)
+		throws DataAccessException {
+		// Get the name of the method that called THIS method.
+		String sqlPropName = "sql." + deriveMethodNameFromStackTrace(3);
+		if (logger.isDebugEnabled()) {
+			logger.debug("sql property name: " + sqlPropName);
+		}
+		return this.updateUsingProperty(sqlPropName, new StringKeyMap(dataToUpdate), criteriaFields);
+	}
+
+	//
+	// save methods...
+	//
+
+	/**
+	 * Saves a single row to a table by issuing either an insert or an update. By convention, the method assumes the
+	 * following:
+	 * <ol>
+	 * <li>You have configured a property <code>sql.[calling method name].exists</code> provided an existence query that
+	 * will return one row for the primary key of the table</li>
+	 * <li>You have configured a property <code>sql.[calling method name].insert</code>to handle inserting a new row</li>
+	 * <li>You have configured a property <code>sql.[calling method name].update</code>to handle updating an existing
+	 * row</li>
+	 * </ol>
+	 * 
+	 * @param dataToSave
+	 * @param criteriaFields
+	 *            these are the fields that:
+	 *            <ol>
+	 *            <li>will be used to for the where clause of the .exist query</li>
+	 *            <li>will be used for the where clause of the .update query</li>
+	 *            </ol>
+	 * @return
+	 * @throws DataAccessException
+	 */
+	public final StringKeyMap saveEasily(StringKeyMap dataToSave, String... criteriaFields)
+		throws DataAccessException {
+		String sqlPropPrefix = "sql." + deriveMethodNameFromStackTrace(3);
+
+		Object[] criteriaValues = new Object[criteriaFields.length];
+		for (int i = 0; i < criteriaFields.length; i++) {
+			criteriaValues[i] = dataToSave.get(criteriaFields[i]);
+		}
+
+		StringKeyMap m = selectSingleUsingProperty(new RowHandler(), sqlPropPrefix + ".exists", criteriaValues);
+
+		if (m != null) {
+			// Update
+			// Replace the map values with the dataToSave values.
+			for (String key : dataToSave.keySet()) {
+				m.put(key, dataToSave.get(key));
+			}
+			updateUsingProperty(sqlPropPrefix + ".update", m, criteriaFields);
+		} else {
+			// Insert
+			insertUsingProperty(sqlPropPrefix + ".insert", dataToSave);
+		}
+		return m;
+	}
+	
+	
+	
+	//
+	// delete methods...
+	//
+
+	/**
+	 * Issues a delete statement.
+	 * 
+	 * @param sqlPropName
+	 *            property that specifies the parameterized SQL delete statement.
+	 * @param queryParms
+	 *            object array of parameters to be passed into the statement.
+	 * @return number of rows affected
+	 * @throws DataAccessException
+	 *             which may wrap a SQLException or other kind of exception.
+	 */
+	public int deleteUsingProperty(String sqlPropName, Object... queryParms) throws DataAccessException {
+		try {
+			String sql = getStringProperty(sqlPropName);
+			if (logger.isDebugEnabled()) {
+				logger.debug("sql property value: " + sql);
+			}
+
+			QueryRunner qr = new QueryRunner(getDataSource(), !parameterMetadataSupport);
+
+			if (logger.isDebugEnabled()) {
+				logger.debug("delete sql: " + sql);
+				StringBuilder vals = new StringBuilder();
+				vals.append("[");
+				if (queryParms != null) {
+					for (Object val : queryParms) {
+						vals.append(val);
+						vals.append(", ");
+					}
+					if (vals.toString().endsWith(", ")) {
+						vals.setLength(vals.length() - 2);
+					}
+				}
+				vals.append("]");
+				logger.debug("     parms: " + vals.toString());
+
+			}
+			// Note the underlying connection must be in autocommit mode.
+			int rowsDeleted = qr.update(sql, queryParms);
+
+			return rowsDeleted;
+
+		} catch (Exception e) {
+			throw handleException(e);
+		}
+	}
+
+	/**
+	 * Issues a delete statement. By convention, the method will assume a property exists of the form: "sql." + [name of
+	 * method that called this method].
+	 * 
+	 * @param queryParms
+	 *            parameters to be passed into the sql statement.
+	 * @return number of rows affected.
+	 * @throws DataAccessException
+	 */
+	public final int deleteEasily(Object... queryParms) throws DataAccessException {
+		// Get the name of the method that called THIS method.
+		String sqlPropname = "sql." + deriveMethodNameFromStackTrace(3);
+		if (logger.isDebugEnabled()) {
+			logger.debug("sql property name: " + sqlPropname);
+		}
+		return this.deleteUsingProperty(sqlPropname, queryParms);
+	}
+
+	
+	
+	/**
+	 * Overrides base exception to provide checking for various types of SQLExceptions.
+	 * 
+	 * @param e
+	 * @return a DataAccessException that wraps the given exception. Special handling is included for detecting certain
+	 *         SQLException sql states and instantiating subclasses of DataAccessException as appropriate.
+	 */
+	protected DataAccessException handleException(Exception e) {
+		logger.error(e.getMessage(), e);
+		if (e instanceof DataAccessException) {
+			return (DataAccessException) e;
+
+		} else if (e instanceof SQLException) {
+			SQLException s = (SQLException) e;
+			String sqlState = s.getSQLState();
+
+			if (sqlState == null && s.getCause() != null && s.getCause() instanceof SQLException)
+				sqlState = ((SQLException) s.getCause()).getSQLState();
+
+			logger.error("sqlstate: " + s.getSQLState());
+			logger.error("error code: " + s.getErrorCode());
+			logger.error("message: " + s.getMessage());
+
+			if (sqlState == null || sqlState.isEmpty()) {
+				DataAccessException dae = new DataAccessException(s);
+				return dae;
+			} else if (dialect.isDatabaseUnavailableSQLState(sqlState)) {
+				// Indicate the database as unavailable.
+				return new UnavailableException(dialect.getSQLStateDescription(sqlState), e);
+			} else {
+				// Could add additional varieties here.
+				String description = dialect.getSQLStateDescription(sqlState);
+				if (description == null || "".equals(description.trim())) {
+					description = e.getMessage() + "(" + s.getMessage() + ")";
+				}
+				DataAccessException dae = new DataAccessException(dialect.getSQLStateDescription(sqlState), s);
+				return dae;
+			}
+
+		} else {
+
+			DataAccessException dae = new DataAccessException(e);
+			return dae;
 		}
 	}
 
@@ -804,97 +860,49 @@ public abstract class BaseSqlDao extends BaseDao {
 	}
 
 	/**
-	 * Issues a delete statement.
+	 * <p>
+	 * Convenience method. Builds and returns a complete SQL statement when the statement template contain both
+	 * MessageFormat parameters. This most commonly occurs when you need to populate a comma-separated list of values
+	 * for a SQL WHERE IN and the jdbc replacement parameter '?' will not suffice. This method handles escaping of
+	 * single-quotes (if any) in the statement to ensure the {@link MessageFormat#format(String, Object...) } method does
+	 * not destroy them.
+	 * </p>
+	 * <p>
+	 * For example:
+	 * </p>
+	 * <code>select * from t_employees where employee_id in ({0}) and organization_name=?</code>
+	 * <p>
+	 * In this case, the {0} message format parameter will be replaced dynamically with a comma-separated list of values
+	 * BEFORE creating an underlying PrepardStatement. The ? parameter will be handled via the standard
+	 * {@link PreparedStatement#setObject(int, Object)} methods approach.
+	 * </p>
+	 * <p>
+	 * It should be noted that this (MessageFormat substitution) does create a risk of SQL Injection vulnerability.
+	 * Consequently, you should make sure adequate measures to prevent this are in place in your calling code.
+	 * </p>
 	 * 
-	 * @param sqlPropName
-	 *            property that specifies the parameterized SQL delete statement.
-	 * @param queryParms
-	 *            object array of parameters to be passed into the statement.
-	 * @return number of rows affected
-	 * @throws DataAccessException
-	 *             which may wrap a SQLException or other kind of exception.
-	 */
-	public int deleteUsingProperty(String sqlPropName, Object... queryParms) throws DataAccessException {
-		try {
-			String sql = getStringProperty(sqlPropName);
-			if (logger.isDebugEnabled()) {
-				logger.debug("sql property value: " + sql);
-			}
-
-			QueryRunner qr = new QueryRunner(getDataSource(),!parameterMetadataSupport);
-
-			if (logger.isDebugEnabled()) {
-				logger.debug("delete sql: " + sql);
-				StringBuilder vals = new StringBuilder();
-				vals.append("[");
-				if (queryParms != null) {
-					for (Object val : queryParms) {
-						vals.append(val);
-						vals.append(", ");
-					}
-					if (vals.toString().endsWith(", ")) {
-						vals.setLength(vals.length() - 2);
-					}
-				}
-				vals.append("]");
-				logger.debug("     parms: " + vals.toString());
-
-			}
-			// Note the underlying connection must be in autocommit mode.
-			int rowsDeleted = qr.update(sql, queryParms);
-
-			return rowsDeleted;
-
-		} catch (Exception e) {
-			throw handleException(e);
-		}
-	}
-
-	/**
-	 * Overrides base exception to provide checking for various types of SQLExceptions.
+	 * @param sql
+	 *            base statement that may contain escapes for the sql.defaultColumns property.
+	 * @param messageParms
+	 *            , if any to be spliced in to the SQL statement if it contains the '{n}' message format parameters. If
+	 *            you have no message parms strings to specify, use {@link #buildSelectSQL(String, Object...)} instead.
 	 * 
-	 * @param e
-	 * @return a DataAccessException that wraps the given exception. Special handling is included for detecting certain
-	 *         SQLException sql states and instantiating subclasses of DataAccessException as appropriate.
+	 * @return sql with any additional column modifications spliced in.
 	 */
-	protected DataAccessException handleException(Exception e) {
-		logger.error(e.getMessage(), e);
-		if (e instanceof DataAccessException) {
-			return (DataAccessException) e;
+	public static String buildSelectSQL(String sql, Object... messageParms) {
 
-		} else if (e instanceof SQLException) {
-			SQLException s = (SQLException) e;
-			String sqlState = s.getSQLState();
-			
-			if (sqlState == null && s.getCause() != null && s.getCause() instanceof SQLException)
-				sqlState = ((SQLException) s.getCause()).getSQLState();
-			
-			logger.error("sqlstate: "+s.getSQLState());
-			logger.error("error code: "+s.getErrorCode());
-			logger.error("message: "+s.getMessage());
-		
-			if (sqlState == null || sqlState.isEmpty()) {
-				DataAccessException dae = new DataAccessException(s);
-				return dae;
-			} else if (dialect.isDatabaseUnavailableSQLState(sqlState)) {
-				// Mark the database as unavailable.
-				return new UnavailableException(dialect.getSQLStateDescription(sqlState), e);
-			} else {
-				// Could add additional varieties here.
-				String description = dialect.getSQLStateDescription(sqlState);
-				if (description == null || "".equals(description.trim())) {
-					description = e.getMessage() + "(" + s.getMessage() + ")";
-				}
-				DataAccessException dae = new DataAccessException(dialect.getSQLStateDescription(sqlState), s);
-				return dae;
-			}
-
-		} else {
-
-			DataAccessException dae = new DataAccessException(e);
-			return dae;
+		if (messageParms != null && messageParms.length > 0) {
+			// First escape all the single quotes so the message format mechanism doesn't destroy them.
+			sql = sql.replaceAll("'", "''");
+			sql = MessageFormat.format(sql, messageParms);
 		}
-	}
 
+		if (logger.isDebugEnabled()) {
+			logger.debug("sql after substitution: " + sql);
+		}
+
+		return sql;
+
+	}
 
 }
