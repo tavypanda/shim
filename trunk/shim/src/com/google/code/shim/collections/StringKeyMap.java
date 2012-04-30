@@ -9,6 +9,7 @@ import java.util.Map;
  * As such, this class is syntactic sugar and can be used for any map that represents a labelled list of items.  
  * This class also provides get methods that handle common type casting, where needed.
  * @author dgau
+ * @deprecated - MapUtil should be used in favor of this class where typed access to values is needed.
  *
  */
 public class StringKeyMap extends LinkedHashMap<String, Object> {
