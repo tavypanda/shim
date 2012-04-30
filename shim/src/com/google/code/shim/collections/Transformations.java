@@ -1,21 +1,16 @@
 package com.google.code.shim.collections;
 
-import java.lang.reflect.Array;
-import java.sql.ResultSet;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-
-import com.google.code.shim.collections.StringKeyMap;
+ 
 
 public class Transformations {
 	public enum AggregateFunction {
@@ -26,12 +21,12 @@ public class Transformations {
 	}
 	public static String EMPTY_PIVOT_VALUE="(empty)";
 	
-	public static void sort(List<StringKeyMap> toBeSorted, final String... sortKeys){
+	public static void sort(List<Map<String,Object>> toBeSorted, final String... sortKeys){
 		if(toBeSorted==null || toBeSorted.isEmpty()) return;
-		Collections.sort(toBeSorted, new Comparator<StringKeyMap>(){
+		Collections.sort(toBeSorted, new Comparator<Map<String,Object>>(){
 
 			@Override
-			public int compare(StringKeyMap m1, StringKeyMap m2) {
+			public int compare(Map<String,Object> m1, Map<String,Object> m2) {
 				for(String key: sortKeys){
 					Object v1 = m1.get(key);
 					Object v2 = m2.get(key);
@@ -83,9 +78,9 @@ public class Transformations {
 	 * @param valueKey
 	 * @return a map of the keys and values found in the table
 	 */
-	public static <T, V> Map<T,V> createMap(List<StringKeyMap> dataTable, String keyKey, String valueKey){
+	public static <T, V> Map<T,V> createMap(List<Map<String,Object>> dataTable, String keyKey, String valueKey){
 		LinkedHashMap<T,V> map = new LinkedHashMap<T,V>();
-		for(StringKeyMap row: dataTable){
+		for(Map<String,Object> row: dataTable){
 			
 			@SuppressWarnings("unchecked")
 			T  theKey = (T) row.get(keyKey);
@@ -108,7 +103,7 @@ public class Transformations {
 	 * @return a modified data table containing the same keys as the original for each row, however the key specified by the numericKey will now 
 	 * return a number that represents an aggregated value.
 	 */
-	public static List<StringKeyMap> groupBy(List<StringKeyMap> dataTable, String numericKey, AggregateFunction fc, String... groupByKeys ){
+	public static List<Map<String,Object>> groupBy(List<Map<String,Object>> dataTable, String numericKey, AggregateFunction fc, String... groupByKeys ){
 		if(dataTable==null || dataTable.isEmpty()) return Collections.emptyList();
 		sort(dataTable, groupByKeys); 
 		
@@ -116,11 +111,11 @@ public class Transformations {
 		Object[] currentValues = new Object[groupByKeys.length];
 		Number aggregate=null;
 		int countInGroup=0;
-		List<StringKeyMap> result = new ArrayList<StringKeyMap>();
+		List<Map<String,Object>> result = new ArrayList<Map<String,Object>>();
 		
-		Iterator<StringKeyMap> rowIter = dataTable.iterator();
+		Iterator<Map<String,Object>> rowIter = dataTable.iterator();
 		while(rowIter.hasNext()){
-			StringKeyMap row = rowIter.next();
+			Map<String,Object> row = rowIter.next();
 			
 			//Populate the current values of the keys.
 			for(int i=0; i<currentValues.length; i++){
@@ -134,7 +129,7 @@ public class Transformations {
 			boolean doBreak = !Arrays.equals(currentValues, lastValues);
 			if(doBreak){
 			
-				StringKeyMap resultEntry = buildGroupByRecord( groupByKeys, lastValues, countInGroup, numericKey, aggregate, fc);
+				Map<String,Object> resultEntry = buildGroupByRecord( groupByKeys, lastValues, countInGroup, numericKey, aggregate, fc);
 				 
 				result.add(resultEntry);
 				
@@ -145,7 +140,7 @@ public class Transformations {
 			}
 			
 			
-			Number n = row.getNumber(numericKey);
+			Number n = MapUtil.getValue(row, numericKey);
 			countInGroup++;
 			switch(fc){
 			case AVG:
@@ -180,7 +175,7 @@ public class Transformations {
 
 		}
 		
-		StringKeyMap resultEntry = buildGroupByRecord( groupByKeys, lastValues, countInGroup, numericKey, aggregate, fc);
+		Map<String,Object> resultEntry = buildGroupByRecord( groupByKeys, lastValues, countInGroup, numericKey, aggregate, fc);
 		 
 		result.add(resultEntry);
 		
@@ -189,8 +184,8 @@ public class Transformations {
 	}
 	
 	
-	private static StringKeyMap buildGroupByRecord(String[] groupByKeys, Object[] groupByValues, int countInGroup, String numericKey, Number aggregate,  AggregateFunction fc){
-		StringKeyMap resultEntry = new StringKeyMap();
+	private static Map<String,Object> buildGroupByRecord(String[] groupByKeys, Object[] groupByValues, int countInGroup, String numericKey, Number aggregate,  AggregateFunction fc){
+		Map<String,Object> resultEntry = new LinkedHashMap<String,Object>();
 		Number value=null;
 		switch(fc){
 		case AVG:
@@ -256,36 +251,36 @@ public class Transformations {
 	 * @param emptyValue the value to be used when the aggregation is null or empty.  Can be null, but zero is commonly used.
 	 * @return
 	 */
-	public static List<StringKeyMap> pivot(List<StringKeyMap> dataTable, String groupByKey, String pivotKey, String valueKey,  AggregateFunction fc, Number emptyValue  ){
+	public static List<Map<String,Object>> pivot(List<Map<String,Object>> dataTable, String groupByKey, String pivotKey, String valueKey,  AggregateFunction fc, Number emptyValue  ){
 		if(dataTable==null || dataTable.isEmpty()) return Collections.emptyList();
 		sort(dataTable, groupByKey, pivotKey);
 		//First pass, find the set of values (e.g. dog, cat, fish, snake)
 		LinkedHashSet<Object> distinctValues = new LinkedHashSet<Object>();
 
-		for(StringKeyMap row: dataTable){
-			distinctValues.add( row.get(pivotKey,EMPTY_PIVOT_VALUE) );
+		for(Map<String,Object> row: dataTable){
+			distinctValues.add( MapUtil.getValue(row, pivotKey, EMPTY_PIVOT_VALUE) );
 		}
 		
 		Object[] pivotValueArray = new Object[distinctValues.size()];
 		distinctValues.toArray(pivotValueArray);
 		
 		//Second pass, perform group-by and aggregate.
-		List<StringKeyMap> results = new ArrayList<StringKeyMap>();
+		List<Map<String,Object>> results = new ArrayList<Map<String,Object>>();
 		String currentKey=null;
 		String lastKey=null;
 		Number[] currentValuesPerPivot = new Number[ pivotValueArray.length];
 		Integer[] countsPerPivot = new Integer[ pivotValueArray.length];
 		Arrays.fill(countsPerPivot, 0);
 		Number[] aggValuesPerPivot = new Number[ pivotValueArray.length];
-		Iterator<StringKeyMap> rowIter = dataTable.iterator();
+		Iterator<Map<String,Object>> rowIter = dataTable.iterator();
 		while(rowIter.hasNext()){
-			StringKeyMap row = rowIter.next();
-			currentKey = row.getString(groupByKey,"");
+			Map<String,Object> row = rowIter.next();
+			currentKey = MapUtil.getValue(row,groupByKey,"");
 			
 			
 			if(lastKey!=null && !currentKey.equals(lastKey)){
 				//Build the pivot record.
-				StringKeyMap record =  buildPivotRecord(groupByKey, lastKey, pivotValueArray, aggValuesPerPivot, countsPerPivot, fc, emptyValue);
+				Map<String,Object> record =  buildPivotRecord(groupByKey, lastKey, pivotValueArray, aggValuesPerPivot, countsPerPivot, fc, emptyValue);
 				 
 				//Add to the result table.
 				results.add(record);
@@ -299,7 +294,7 @@ public class Transformations {
 			
 			Object pivotVal = row.get(pivotKey);
 			for(int i=0; i<pivotValueArray.length; i++){
-				Number n = row.getNumber( valueKey );
+				Number n = MapUtil.getValue(row, valueKey );
 				if(pivotVal==null){
 					pivotVal = EMPTY_PIVOT_VALUE;
 				}
@@ -355,7 +350,7 @@ public class Transformations {
 		}
 		
 		//Build the last pivot record.
-		StringKeyMap lastRecord = buildPivotRecord(groupByKey, currentKey, pivotValueArray, aggValuesPerPivot, countsPerPivot, fc, emptyValue);
+		Map<String,Object> lastRecord = buildPivotRecord(groupByKey, currentKey, pivotValueArray, aggValuesPerPivot, countsPerPivot, fc, emptyValue);
 		 
 		//Add to the result table.
 		results.add(lastRecord);
@@ -373,8 +368,8 @@ public class Transformations {
 	 * @param fc
 	 * @return
 	 */
-	private static StringKeyMap buildPivotRecord(String groupByKey, String keyValueToUse, Object[] pivotValueArray, Number[] aggValuesPerPivot, Integer[] countsPerPivot, AggregateFunction fc, Number emptyValue){
-		StringKeyMap record = new StringKeyMap();
+	private static Map<String,Object> buildPivotRecord(String groupByKey, String keyValueToUse, Object[] pivotValueArray, Number[] aggValuesPerPivot, Integer[] countsPerPivot, AggregateFunction fc, Number emptyValue){
+		Map<String,Object> record = new LinkedHashMap<String,Object>();
 		record.put(groupByKey, keyValueToUse);
 		
 		for(int i=0; i<pivotValueArray.length; i++){
@@ -412,10 +407,10 @@ public class Transformations {
 	 * @param tableKey
 	 * @return the array, sorted in natural ascending order.
 	 */
-	public static Object[] distinctValuesFrom(List<StringKeyMap> dataTable, String tableKey ){
+	public static Object[] distinctValuesFrom(List<Map<String,Object>> dataTable, String tableKey ){
 		LinkedHashSet<Object> vals = new LinkedHashSet<Object>();
-		for(StringKeyMap row: dataTable){
-			vals.add( row.get(tableKey,EMPTY_PIVOT_VALUE));
+		for(Map<String,Object> row: dataTable){
+			vals.add( MapUtil.getValue(row,tableKey,EMPTY_PIVOT_VALUE));
 		}
 	
 		Object[] result = vals.toArray(new Object[vals.size()]);
@@ -456,9 +451,9 @@ public class Transformations {
 				};
 			
 			
-			List<StringKeyMap> table = new ArrayList<StringKeyMap>();
+			List<Map<String,Object>> table = new ArrayList<Map<String,Object>>();
 			for(Object[] r: tbl){
-				StringKeyMap map = new StringKeyMap();
+				Map<String,Object> map = new LinkedHashMap<String,Object>();
 				map.put("state", r[0]);
 				map.put("pet_type",  r[1]);
 				map.put("city",  r[2]);
@@ -468,9 +463,9 @@ public class Transformations {
 			}
 			
 			System.out.println("Group By Results:");
-			List<StringKeyMap> gbResults = Transformations.groupBy(table, "owner_count", AggregateFunction.SUM, "state");
+			List<Map<String,Object>> gbResults = Transformations.groupBy(table, "owner_count", AggregateFunction.SUM, "state");
 			boolean first = true;
-			for(StringKeyMap row: gbResults){
+			for(Map<String,Object> row: gbResults){
 				if(first){
 					for(String k: row.keySet()){
 						System.out.print(k+"\t");
@@ -488,9 +483,9 @@ public class Transformations {
 			
 			//Do the pivot.
 			System.out.println("Pivot Results:");
-			List<StringKeyMap> results = Transformations.pivot(table, "state", "pet_type", "owner_count", AggregateFunction.SUM, 0);
+			List<Map<String,Object>> results = Transformations.pivot(table, "state", "pet_type", "owner_count", AggregateFunction.SUM, 0);
 			first = true;
-			for(StringKeyMap row: results){
+			for(Map<String,Object> row: results){
 				if(first){
 					for(String k: row.keySet()){
 						System.out.print(k+"\t");
@@ -512,5 +507,44 @@ public class Transformations {
 		}
 	}
 
-	
+	/**
+	 * Joins two maps together whose keys match.  The resultant list ONLY contains Maps containing values
+	 * of each map where the keys matched.  When key name collisions occur, the second map's values "win".
+	 * @param map1
+	 * @param map2
+	 * @param onKeys
+	 * @return
+	 */
+	public static List<Map<String,Object>> join(List<Map<String,Object>> list1, List<Map<String,Object>> list2, String... onKeys){
+		
+		StringBuilder keyValsFrom1 = new StringBuilder();
+		StringBuilder keyValsFrom2 = new StringBuilder();
+		List<Map<String,Object>> result = new ArrayList<Map<String,Object>>();
+		
+		for(Map<String,Object> mapFrom1: list1){
+			//Create comparison key from 1
+			for(String k: onKeys){ keyValsFrom1.append(mapFrom1.get(k)).append("|"); }
+			
+			for(Map<String,Object> mapFrom2: list2){
+				//Create comparison key from 2
+				for(String k: onKeys){ keyValsFrom2.append(mapFrom2.get(k)).append("|"); }
+				
+				//If match, build resultant.
+				if(keyValsFrom1.toString().equals(keyValsFrom2.toString())){
+					Map<String,Object> resultantMap = new LinkedHashMap<String,Object>();
+					resultantMap.putAll(mapFrom1);
+					resultantMap.putAll(mapFrom2);
+					result.add(resultantMap);
+				}
+				
+				keyValsFrom2.setLength(0);
+				
+			}
+			
+			keyValsFrom1.setLength(0);
+			
+		}
+		
+		return result;
+	}
 }
