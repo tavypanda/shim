@@ -8,6 +8,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
 import org.apache.commons.codec.binary.Base64;
+import org.apache.commons.codec.binary.Hex;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
 
@@ -37,6 +38,17 @@ public class HashUtil {
 			return null;
 		}
 	}
+	
+	public static String hashHexMD5(String data) {
+		try{
+			
+			return new String(Hex.encodeHex( produceDigest("MD5",data)));
+		} catch(  NoSuchAlgorithmException e){
+			logger.error("MD5 hash algorithm unavailable. "+e.getMessage());
+			return null;
+		}
+	}
+	
 
 	/**
 	 * Produces an SHA-256 hash of the specified text using Base64 encoding.
