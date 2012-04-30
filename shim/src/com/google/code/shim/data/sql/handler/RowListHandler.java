@@ -6,16 +6,15 @@ import java.util.Map;
 
 import org.apache.commons.dbutils.RowProcessor;
 import org.apache.commons.dbutils.handlers.AbstractListHandler;
-
-import com.google.code.shim.collections.StringKeyMap;
+ 
 
 /**
  * <code>ResultSetHandler</code> implementation that converts a <code>ResultSet</code> into a <code>List</code> of
- * <code>Map</code>s. This class is thread safe.
+ * <code>Map</code>s that are keyed by <code>String</code>s. This class is thread safe.
  * 
  * @see org.apache.commons.dbutils.ResultSetHandler
  */
-public class RowListHandler extends AbstractListHandler<StringKeyMap> {
+public class RowListHandler extends AbstractListHandler<Map<String,Object>> {
 
 	/**
 	 * The RowProcessor implementation to use when converting rows into Maps.
@@ -45,10 +44,10 @@ public class RowListHandler extends AbstractListHandler<StringKeyMap> {
 	 * @see org.apache.commons.dbutils.handlers.AbstractListHandler#handle(ResultSet)
 	 */
 	@Override
-	protected StringKeyMap handleRow(ResultSet rs) throws SQLException {
+	protected Map<String,Object> handleRow(ResultSet rs) throws SQLException {
 		Map<String, Object> result = convert.toMap(rs);
 
-		return new StringKeyMap(result);
+		return result;
 	}
 
 }
