@@ -8,6 +8,8 @@ import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.text.MessageFormat;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -20,10 +22,11 @@ import org.apache.commons.dbutils.handlers.ScalarHandler;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
 
-import com.google.code.shim.collections.StringKeyMap;
+
 import com.google.code.shim.data.BaseDao;
 import com.google.code.shim.data.DataAccessException;
 import com.google.code.shim.data.UnavailableException;
+import com.google.code.shim.data.sql.handler.ListOfScalarsHandler;
 import com.google.code.shim.data.sql.handler.RowHandler;
 import com.google.code.shim.data.sql.handler.RowListHandler;
 
@@ -42,9 +45,9 @@ import com.google.code.shim.data.sql.handler.RowListHandler;
  * </p>
  * <ul>
  * <li>Method names should begin with 'get' or 'find'.</li>
- * <li>Methods returning a single {@link StringKeyMap} of data should either return the {@link Map<String, Object>} or
+ * <li>Methods returning a single {@link Map<String,Object>} of data should either return the {@link Map<String, Object>} or
  * null if the query returned no results.</li>
- * <li>Methods returning multiple {@link StringKeyMap}s of data should either return a List<{@link Map<String, Object> }
+ * <li>Methods returning multiple {@link Map<String,Object>}s of data should either return a List<{@link Map<String, Object> }
  * > or Collections.EMPTY_LIST if the query returned no results.</li>
  * <li>Methods returning scalar values should return the scalar or the corresponding empty/null type depending on the
  * type of scalar being returned.</li>
@@ -165,10 +168,10 @@ public abstract class BaseSqlDao extends BaseDao {
 	 * 
 	 * @param queryParms
 	 *            parameters to add to the SQL statement for the query.
-	 * @return a StringKeyMap containing the data or null if not found.
+	 * @return the value or null if one doesn't exist.
 	 * @throws DataAccessException
 	 */
-	public <T> T selectValueEasily(Object... queryParms) throws DataAccessException {
+	public <T> T selectValue(Object... queryParms) throws DataAccessException {
 		// Get the name of the method that called THIS method.
 		String callingMethodName = Thread.currentThread().getStackTrace()[2].getMethodName();
 		String sqlPropname = "sql." + callingMethodName;
@@ -178,7 +181,8 @@ public abstract class BaseSqlDao extends BaseDao {
 
 		return selectValueUsingProperty(sqlPropname, queryParms);
 	}
-
+	
+	
 	/**
 	 * Executes a query that returns a single scalar value. The query is specified by a property name.
 	 * 
@@ -186,7 +190,7 @@ public abstract class BaseSqlDao extends BaseDao {
 	 *            the property in the property file for this DAO that contains the SQL statement to use
 	 * @param queryParms
 	 *            parameters to be used in the SQL (replacing the placeholder '?' in each the SQL statement)
-	 * @return
+	 * @return the value or null if one doesn't exist.
 	 * @throws DataAccessException
 	 */
 	@SuppressWarnings("unchecked")
@@ -199,7 +203,87 @@ public abstract class BaseSqlDao extends BaseDao {
 			throw handleException(e);
 		}
 	}
+	/**
+	 * Executes a query that returns a single scalar value. The query is specified by a property name.
+	 * 
+	 * @param sql the sql statement
+	 * @param queryParms parameters to be used in the SQL (replacing the placeholder '?' in each the SQL statement)
+	 * @return the value or null if one doesn't exist.
+	 * @throws DataAccessException
+	 */
+	@SuppressWarnings("unchecked")
+	public <T> T selectValueUsingStatement(String sql, Object... queryParms) throws DataAccessException {
+		try {
+			QueryRunner qr = new QueryRunner(getDataSource(), !parameterMetadataSupport);
+			return (T) qr.query(sql, new ScalarHandler(), queryParms);
+		} catch (Exception e) {
+			throw handleException(e);
+		}
+	}
 
+	//
+	// Select values methods
+	//
+	/**
+	 * <p>
+	 * Queries for a list of scalar values, one from each row of the result set. By convention, the method will assume a property exists of the form:
+	 * </p>
+	 * <code>sql.[callingMethodName]</code>
+	 * <p>
+	 * that contains the SQL for this query
+	 * </p>
+	 * 
+	 * @param queryParms
+	 *            parameters to add to the SQL statement for the query.
+	 * @return the value or null if one doesn't exist.
+	 * @throws DataAccessException
+	 */
+	public <T> List<T> selectValues(Object... queryParms) throws DataAccessException {
+		// Get the name of the method that called THIS method.
+		String callingMethodName = Thread.currentThread().getStackTrace()[2].getMethodName();
+		String sqlPropname = "sql." + callingMethodName;
+		if (logger.isDebugEnabled()) {
+			logger.debug("sql property name: " + sqlPropname);
+		}
+
+		return selectValuesUsingProperty(sqlPropname, queryParms);
+	}
+	/**
+	 * Executes a query for a list of scalar values, one from each row of the result set. The query is specified by a property name.
+	 * 
+	 * @param sqlPropname
+	 *            the property in the property file for this DAO that contains the SQL statement to use
+	 * @param queryParms
+	 *            parameters to be used in the SQL (replacing the placeholder '?' in each the SQL statement)
+	 * @return the value or null if one doesn't exist.
+	 * @throws DataAccessException
+	 */
+	public <T> List<T> selectValuesUsingProperty(String sqlPropname, Object... queryParms) throws DataAccessException {
+		try {
+			String sql = getStringProperty(sqlPropname);
+			QueryRunner qr = new QueryRunner(getDataSource(), !parameterMetadataSupport);
+			return  qr.query(sql, new ListOfScalarsHandler <T>(), queryParms);
+		} catch (Exception e) {
+			throw handleException(e);
+		}
+	}
+	/**
+	 * Executes a query for a list of scalar values, one from each row of the result set. The query is specified by a property name.
+	 * 
+	 * @param sql the sql statement
+	 * @param queryParms parameters to be used in the SQL (replacing the placeholder '?' in each the SQL statement)
+	 * @return the value or null if one doesn't exist.
+	 * @throws DataAccessException
+	 */
+	public <T> List<T> selectValuesUsingStatement(String sql, Object... queryParms) throws DataAccessException {
+		try {
+			QueryRunner qr = new QueryRunner(getDataSource(), !parameterMetadataSupport);
+			return  qr.query(sql, new ListOfScalarsHandler <T>(), queryParms);
+		} catch (Exception e) {
+			throw handleException(e);
+		}
+	}
+	
 	//
 	// Select single methods...
 	//
@@ -263,10 +347,10 @@ public abstract class BaseSqlDao extends BaseDao {
 	 * 
 	 * @param queryParms
 	 *            parameters to add to the SQL statement for the query.
-	 * @return a StringKeyMap containing the data or null if not found.
+	 * @return a Map<String,Object> containing the data or null if not found.
 	 * @throws DataAccessException
 	 */
-	public final StringKeyMap selectSingleEasily(Object... queryParms) throws DataAccessException {
+	public final Map<String,Object> selectSingle(Object... queryParms) throws DataAccessException {
 		// Get the name of the method that called THIS method.
 		String sqlPropName = "sql." + deriveMethodNameFromStackTrace(3);
 		if (logger.isDebugEnabled()) {
@@ -293,7 +377,7 @@ public abstract class BaseSqlDao extends BaseDao {
 	 * @return the output of the single row, controlled by the handler
 	 * @throws DataAccessException
 	 */
-	public final <T> T selectSingleEasily(ResultSetHandler<T> handler, Object... queryParms) throws DataAccessException {
+	public final <T> T selectSingle(ResultSetHandler<T> handler, Object... queryParms) throws DataAccessException {
 		// Get the name of the method that called THIS method.
 		String sqlPropName = "sql." + deriveMethodNameFromStackTrace(3);
 		if (logger.isDebugEnabled()) {
@@ -319,10 +403,10 @@ public abstract class BaseSqlDao extends BaseDao {
 	 * 
 	 * @param queryParms
 	 *            parameters to add to the SQL statement for the query.
-	 * @return a StringKeyMap containing the data or null if not found.
+	 * @return a Map<String,Object> containing the data or null if not found.
 	 * @throws DataAccessException
 	 */
-	public final List<StringKeyMap> selectMultipleEasily(Object... queryParms) throws DataAccessException {
+	public final List<Map<String,Object>> selectMultiple(Object... queryParms) throws DataAccessException {
 		String sqlPropname = "sql." + deriveMethodNameFromStackTrace(3);
 		if (logger.isDebugEnabled()) {
 			logger.debug("sql property name: " + sqlPropname);
@@ -347,7 +431,7 @@ public abstract class BaseSqlDao extends BaseDao {
 	 * @return
 	 * @throws DataAccessException
 	 */
-	public final <T> T selectMultipleEasily(ResultSetHandler<T> handler, Object... queryParms)
+	public final <T> T selectMultiple(ResultSetHandler<T> handler, Object... queryParms)
 		throws DataAccessException {
 		String sqlPropname = "sql." + deriveMethodNameFromStackTrace(3);
 		if (logger.isDebugEnabled()) {
@@ -416,7 +500,7 @@ public abstract class BaseSqlDao extends BaseDao {
 	 * @throws DataAccessException
 	 *             which may wrap a SQLException or other kind of exception.
 	 */
-	public StringKeyMap insertUsingProperty(String sqlPropname, StringKeyMap mapOfData)
+	public Map<String,Object> insertUsingProperty(String sqlPropname, Map<String,Object> mapOfData)
 		throws DataAccessException {
 
 		String sql = getStringProperty(sqlPropname);
@@ -438,7 +522,7 @@ public abstract class BaseSqlDao extends BaseDao {
 	 *         as part of the insert.
 	 * @throws DataAccessException
 	 */
-	public StringKeyMap insertUsingStatement(String sql, StringKeyMap mapOfData)
+	public Map<String,Object> insertUsingStatement(String sql, Map<String,Object> mapOfData)
 		throws DataAccessException {
 		try {
 
@@ -531,13 +615,13 @@ public abstract class BaseSqlDao extends BaseDao {
 	 *         insert.
 	 * @throws DataAccessException
 	 */
-	public final StringKeyMap insertEasily(Map<String, Object> dataToInsert) throws DataAccessException {
+	public final Map<String,Object> insert(Map<String, Object> dataToInsert) throws DataAccessException {
 		// Get the name of the method that called THIS method.
 		String sqlPropname = "sql." + deriveMethodNameFromStackTrace(3);
 		if (logger.isDebugEnabled()) {
 			logger.debug("sql property name: " + sqlPropname);
 		}
-		return this.insertUsingProperty(sqlPropname, new StringKeyMap(dataToInsert));
+		return this.insertUsingProperty(sqlPropname, new LinkedHashMap<String,Object>(dataToInsert));
 	}
 
 	//
@@ -563,7 +647,7 @@ public abstract class BaseSqlDao extends BaseDao {
 	 * @return the number of rows affected
 	 * @throws DataAccessException
 	 */
-	public int updateUsingProperty(String sqlPropname, StringKeyMap mapOfData, String... criteriaColumns)
+	public int updateUsingProperty(String sqlPropname, Map<String,Object> mapOfData, String... criteriaColumns)
 		throws DataAccessException {
 
 		String sql = getStringProperty(sqlPropname);
@@ -573,7 +657,7 @@ public abstract class BaseSqlDao extends BaseDao {
 		return updateUsingStatement(sql, mapOfData, criteriaColumns);
 	}
 
-	public int updateUsingStatement(String sql, StringKeyMap mapOfData, String... criteriaColumns)
+	public int updateUsingStatement(String sql, Map<String,Object> mapOfData, String... criteriaColumns)
 		throws DataAccessException {
 		try {
 			Object[] theValues=null;
@@ -644,14 +728,14 @@ public abstract class BaseSqlDao extends BaseDao {
 	 * @return number of rows updated
 	 * @throws DataAccessException
 	 */
-	public final int updateEasily(Map<String, Object> dataToUpdate, String... criteriaFields)
+	public final int update(Map<String, Object> dataToUpdate, String... criteriaFields)
 		throws DataAccessException {
 		// Get the name of the method that called THIS method.
 		String sqlPropName = "sql." + deriveMethodNameFromStackTrace(3);
 		if (logger.isDebugEnabled()) {
 			logger.debug("sql property name: " + sqlPropName);
 		}
-		return this.updateUsingProperty(sqlPropName, new StringKeyMap(dataToUpdate), criteriaFields);
+		return this.updateUsingProperty(sqlPropName, new LinkedHashMap<String,Object>(dataToUpdate), criteriaFields);
 	}
 
 	//
@@ -679,7 +763,7 @@ public abstract class BaseSqlDao extends BaseDao {
 	 * @return
 	 * @throws DataAccessException
 	 */
-	public final StringKeyMap saveEasily(StringKeyMap dataToSave, String... criteriaFields)
+	public final Map<String,Object> save(Map<String,Object> dataToSave, String... criteriaFields)
 		throws DataAccessException {
 		String sqlPropPrefix = "sql." + deriveMethodNameFromStackTrace(3);
 
@@ -688,7 +772,7 @@ public abstract class BaseSqlDao extends BaseDao {
 			criteriaValues[i] = dataToSave.get(criteriaFields[i]);
 		}
 
-		StringKeyMap m = selectSingleUsingProperty(new RowHandler(), sqlPropPrefix + ".exists", criteriaValues);
+		Map<String,Object> m = selectSingleUsingProperty(new RowHandler(), sqlPropPrefix + ".exists", criteriaValues);
 
 		if (m != null) {
 			// Update
@@ -766,7 +850,7 @@ public abstract class BaseSqlDao extends BaseDao {
 	 * @return number of rows affected.
 	 * @throws DataAccessException
 	 */
-	public final int deleteEasily(Object... queryParms) throws DataAccessException {
+	public final int delete(Object... queryParms) throws DataAccessException {
 		// Get the name of the method that called THIS method.
 		String sqlPropname = "sql." + deriveMethodNameFromStackTrace(3);
 		if (logger.isDebugEnabled()) {
@@ -833,7 +917,7 @@ public abstract class BaseSqlDao extends BaseDao {
 	 *            returns for auto generated keys.
 	 * @throws SQLException
 	 */
-	static void addGeneratedKeysToMap(PreparedStatement statement, StringKeyMap mapOfData) throws SQLException {
+	static void addGeneratedKeysToMap(PreparedStatement statement, Map<String,Object> mapOfData) throws SQLException {
 		// Add generated keys from in the statement.
 		ResultSet genKeys = statement.getGeneratedKeys();
 		try {
